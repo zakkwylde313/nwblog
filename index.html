@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>블로그 챌린지 현황</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+ <div class="wrapper">
+    <header>
+        <div class="page-header-top" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h1 class="page-title" style="margin-bottom: 0;">EiE 경기 서북부 협의회 블로그 챌린지</h1>
+            <img src="eie_logo.png" alt="EiE 로고" id="eie-main-logo" style="height: 35px;">
+        </div>
+
+        <div class="challenge-countdown-container" style="text-align: center; margin-bottom: 15px; font-size: 1.1em; color: #555;">
+            <span id="next-challenge-day-display">챌린지 도전 마감 기한: 로딩 중...</span>
+            <span id="time-remaining-display" style="margin-left: 10px; font-weight: bold;">(남은 시간: 로딩 중...)</span>
+        </div>
+
+        <div id="auth-container" style="margin-bottom: 15px; padding: 10px; background-color: #eee; border-radius: 5px;">
+            <div id="login-form">
+                <input type="email" id="login-email" placeholder="관리자 이메일" style="padding: 8px; margin-right: 5px; border: 1px solid #ccc; border-radius: 3px;">
+                <input type="password" id="login-password" placeholder="비밀번호" style="padding: 8px; margin-right: 5px; border: 1px solid #ccc; border-radius: 3px;">
+                <button id="login-button" style="padding: 8px 12px; background-color: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer;">로그인</button>
+                <p id="login-error-message" style="color: red; font-size: 0.9em; margin-top: 5px; display: none;"></p>
+            </div>
+            <div id="user-info" style="display: none;">
+                <span id="user-email-display" style="margin-right: 10px;"></span>
+                <button id="logout-button" style="padding: 8px 12px; background-color: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer;">로그아웃</button>
+            </div>
+        </div>
+        <div id="admin-controls" style="display: none; margin-bottom: 15px;">
+            <button id="show-add-blog-modal-button" style="padding: 8px 15px; background-color: #17a2b8; color: white; border: none; border-radius: 3px; cursor: pointer;">+ 새 블로그 추가</button>
+            <button id="test-update-rss-button" style="padding: 8px 15px; background-color: #ffc107; color: black; border: none; border-radius: 3px; cursor: pointer; margin-left: 10px;">RSS 테스트 업데이트 (특정 블로그)</button>
+        </div>
+
+        <div class="controls">
+            <div class="filters">
+                <select id="status-filter">
+                    <option value="all">모든 상태</option>
+                    <option value="active">챌린지 성공</option>
+                    <option value="inactive">챌린지 도전 중</option>
+                </select>
+                <select id="sort-order">
+                    {/* !!!! "최근 포스팅 순"을 기본 선택으로 !!!! */}
+                    <option value="recent_post" selected>최근 포스팅 순</option>
+                    {/* !!!! "챌린지 순위순" -> "포스팅 많은 순"으로 텍스트 변경 !!!! */}
+                    <option value="post_count_desc">포스팅 많은 순</option> {/* value도 rank 대신 의미있는 이름으로 변경 */}
+                </select>
+            </div>
+            <button class="refresh-button">새로고침</button>
+        </div>
+    </header>
+
+    <main>
+        <section class="summary-container">
+            <div class="summary-card total">
+                <div class="icon-placeholder">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4a90e2" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                </div>
+                <div class="text-content">
+                    <div class="label">총 블로그 수</div>
+                    <div class="value" id="total-blogs-value">?</div>
+                </div>
+            </div>
+
+            <div class="summary-card active">
+                <div class="icon-placeholder">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="#2ecc71" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                </div>
+                <div class="text-content">
+                    <div class="label">챌린지 성공 블로그</div>
+                    <div class="value" id="active-blogs-value">?</div>
+                </div>
+            </div>
+
+            <div class="summary-card inactive">
+                <div class="icon-placeholder">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="#e74c3c" d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+                </div>
+                <div class="text-content">
+                    <div class="label">챌린지 도전 중 블로그</div>
+                    <div class="value" id="inactive-blogs-value">?</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="challenge-rules">
+            <div class="icon-placeholder">
+                <svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4a90e2" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+            </div>
+            <p>
+                <strong>챌린지 최초 시작일: 2025년 05월 10일</strong><br>
+                <strong>블로그 챌린지 규칙:</strong> EiE 경기 서북부 협의회 구성원은 <strong>2주에 최소 한 번 이상 포스팅</strong>해야 합니다.<br>
+                챌린지 최초 시작일을 기준으로 매 2주 마다 포스팅을 최소 1개 이상 업로드 하는 데 성공한 블로그는
+                <strong>챌린지 성공 횟수</strong>, 그렇지 못한 블로그는 <strong>실패 횟수</strong>가 1회씩 증가 합니다.<br>
+                챌린지 포스팅 숫자는 챌린지 시작일인 5월 10일 이후로 올라온 모든 포스팅의 갯수 입니다.
+            </p>
+        </section>
+
+        <section>
+            <h2 class="section-title">협의회 블로그 현황</h2>
+            <div id="blog-dashboard-summary" class="blog-dashboard">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="col-profile"></th> <th class="col-name">블로그 이름</th>
+                            <th class="col-special-mission">특별과제</th>
+                            <th class="col-current-status">현재 챌린지</th>
+                            <th class="col-cumulative-record">누적 기록</th>
+                            <th class="col-total-posts">총 포스팅</th>
+                            <th class="col-last-post-date">최근 포스팅 일시</th>
+                            <th class="col-actions">바로가기</th>
+                        </tr>
+                    </thead>
+                    <tbody id="blog-dashboard-tbody">
+                        </tbody>
+                </table>
+                <div id="dashboard-empty-message" style="display: none;"> <p>요약 정보를 표시할 블로그가 없습니다.</p>
+                </div>
+            </div>
+          
+            <div class="blog-list-container">
+                <div class="empty-list-message" id="empty-message" style="display: none;">
+                    <p>블로그가 없습니다.</p>
+                </div>
+                <ul id="blog-list">
+                    </ul>
+            </div>
+        </section>
+    </main>
+
+    <div class="toast-notification" id="toast-message">
+        <div class="title" id="toast-title">알림 제목</div>
+        <div id="toast-body">알림 내용이 여기에 표시됩니다.</div>
+    </div>
+    <div id="add-blog-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>+ 협의회 블로그 추가</h2>
+                <button id="close-modal-button" class="close-button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-description">등록하려는 협의회 블로그 정보와 RSS 피드 URL을 입력하세요.</p>
+                <form id="add-blog-form">
+                    <div class="form-group">
+                        <label for="blog-name-input">블로그 이름</label>
+                        <input type="text" id="blog-name-input" placeholder="예: 혜리의 코딩 블로그" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="blog-url-input">블로그 URL</label>
+                        <input type="url" id="blog-url-input" placeholder="예: https://blog.example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="rss-feed-url-input">RSS 피드 URL</label>
+                        <input type="url" id="rss-feed-url-input" placeholder="예: https://blog.example.com/rss" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="cancel-add-blog-button" class="button-secondary">취소</button>
+                <button id="submit-add-blog-button" type="submit" form="add-blog-form" class="button-primary">추가하기</button>
+            </div>
+        </div>
+    </div>
+
+ </div> <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
+
+    <script src="script.js"></script>
+</body>
+</html>
