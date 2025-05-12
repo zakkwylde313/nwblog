@@ -2,12 +2,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Firebase 앱 초기화 ---
     const firebaseConfig = {
-        apiKey: "AIzaSyA-j8vIIikH2jbBOvRsKJogBL06a-hHapI", // 실제 키로 대체해주세요
-        authDomain: "nwblog-daa43.firebaseapp.com",
-        projectId: "nwblog-daa43",
-        storageBucket: "nwblog-daa43.appspot.com",
-        messagingSenderId: "796227461113",
-        appId: "1:796227461113:web:6a2edffe1d90641bd06728"
+        apiKey: "YOUR_API_KEY_WILL_BE_SET_BY_VERCEL_ENV",
+        authDomain: "YOUR_AUTH_DOMAIN_WILL_BE_SET_BY_VERCEL_ENV",
+        projectId: "YOUR_PROJECT_ID_WILL_BE_SET_BY_VERCEL_ENV",
+        storageBucket: "YOUR_STORAGE_BUCKET_WILL_BE_SET_BY_VERCEL_ENV",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID_WILL_BE_SET_BY_VERCEL_ENV",
+        appId: "YOUR_APP_ID_WILL_BE_SET_BY_VERCEL_ENV"
     };
 
     if (!firebase.apps.length) {
