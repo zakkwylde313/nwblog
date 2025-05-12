@@ -2,16 +2,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Firebase 앱 초기화 ---
     const firebaseConfig = {
-        apiKey: "YOUR_API_KEY_WILL_BE_SET_BY_VERCEL_ENV",
-        authDomain: "YOUR_AUTH_DOMAIN_WILL_BE_SET_BY_VERCEL_ENV",
-        projectId: "YOUR_PROJECT_ID_WILL_BE_SET_BY_VERCEL_ENV",
-        storageBucket: "YOUR_STORAGE_BUCKET_WILL_BE_SET_BY_VERCEL_ENV",
-        messagingSenderId: "YOUR_MESSAGING_SENDER_ID_WILL_BE_SET_BY_VERCEL_ENV",
-        appId: "YOUR_APP_ID_WILL_BE_SET_BY_VERCEL_ENV"
+        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
     };
 
     if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
+        if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+            firebase.initializeApp(firebaseConfig);
+            console.log("Firebase 앱 초기화 시도 (Vercel 환경 변수 사용할 예정)");
+        } else {
+            console.error("Firebase 설정값이 Vercel 환경 변수에서 제대로 로드되지 않았습니다! Vercel 대시보드 환경 변수 설정을 확인해주세요.");
+            // 사용자에게 심각한 오류임을 알리는 UI 처리
+            const bodyElement = document.querySelector('body');
+            if (bodyElement) {
+                bodyElement.innerHTML = '<div style="padding: 20px; text-align: center; background-color: #ffebee; color: #c62828; border: 1px solid #ef9a9a; border-radius: 5px; margin: 20px;"><h1>⚠️ Firebase 설정 오류!</h1><p>웹사이트가 Firebase에 연결할 수 없습니다. 관리자에게 문의해주세요.</p></div>';
+            }
+        }
     } else {
         firebase.app();
     }
