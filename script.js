@@ -288,6 +288,7 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
                 dashboardEmptyMessage.style.display = 'block';
                 const pTagDash = dashboardEmptyMessage.querySelector('p');
                 if (pTagDash) pTagDash.textContent = '표시할 블로그가 없습니다.';
+                
                 // dashboardTbody.style.display = 'none'; // tbody를 숨길 필요는 없음
             }
             if (emptyMessageElement) {
