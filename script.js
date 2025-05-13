@@ -331,7 +331,7 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
 
                 const cellCurrentStatus = tr.insertCell();
                 cellCurrentStatus.classList.add('col-current-status');
-                const currentStatusText = blog.isActive ? '● 성공' : '⚠ 도전 중';
+                const currentStatusText = blog.isActive ? '● 성공' : '⚠ 진행 중';
                 const currentStatusClass = blog.isActive ? 'success' : 'pending';
                 cellCurrentStatus.innerHTML = `<span class="dashboard-status-text ${currentStatusClass}">${currentStatusText}</span>`;
 

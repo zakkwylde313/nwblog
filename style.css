@@ -727,7 +727,7 @@ header {
     color: #856404;
 }
 .special-mission-pending {
-    background-color: #e9ecef; /* 예시: 도전중은 회색 계열 */
+    background-color: #e9ecef; /* 예시: 진행 중은 회색 계열 */
     color: #495057;
 }
 
