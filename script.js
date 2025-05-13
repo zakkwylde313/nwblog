@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
         const deadline = getNextChallengeDeadline();
         const now = new Date();
         const timeLeft = deadline.getTime() - now.getTime();
-        nextChallengeDayDisplay.textContent = `챌린지 도전 마감 기한: ${formatKoreanDate(deadline, false)} 까지`;
+        nextChallengeDayDisplay.textContent = `챌린지 마감 기한: ${formatKoreanDate(deadline, false)} 까지`;
         if (timeLeft <= 0) {
             timeRemainingDisplay.textContent = "(마감! 다음 주기를 기다려주세요)";
             if (countdownIntervalId) clearInterval(countdownIntervalId); return;
@@ -288,7 +288,6 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
                 dashboardEmptyMessage.style.display = 'block';
                 const pTagDash = dashboardEmptyMessage.querySelector('p');
                 if (pTagDash) pTagDash.textContent = '표시할 블로그가 없습니다.';
-                
                 // dashboardTbody.style.display = 'none'; // tbody를 숨길 필요는 없음
             }
             if (emptyMessageElement) {
@@ -356,7 +355,7 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
             // --- 2. 하단 상세 목록 아이템 생성 (사용자님의 기존 코드와 동일하게 유지) ---
             const listItem = document.createElement('li');
             const statusClassForDetail = blog.isActive ? 'active' : 'inactive';
-            const statusTextForDetail = blog.isActive ? '챌린지 성공' : '챌린지 도전 중';
+            const statusTextForDetail = blog.isActive ? '챌린지 성공' : '챌린지 진행 중';
             const rssIconTextForDetail = blog.rssRegistered ? 'RSS 등록됨' : 'RSS 미등록';
             let recentPostsHTML = '<div class="blog-item-recent-posts"><strong>최신 포스팅</strong><ul>';
             if (blog.posts && blog.posts.length > 0) {
@@ -430,7 +429,7 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
     function updateSummary(total, activeCount, inactiveCount)  { // 파라미터 이름 유지 (내부 로직이 isActive 기준)
         if (totalBlogsValueElement) totalBlogsValueElement.textContent = total;
         if (activeBlogsValueElement) activeBlogsValueElement.textContent = activeCount; // "챌린지 성공" 수
-        if (inactiveBlogsValueElement) inactiveBlogsValueElement.textContent = inactiveCount; // "챌린지 도전 중" 수
+        if (inactiveBlogsValueElement) inactiveBlogsValueElement.textContent = inactiveCount; // "챌린지 진행 중" 수
     }
 
     function applyFiltersAndSort() {

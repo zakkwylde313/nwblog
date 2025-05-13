@@ -395,7 +395,7 @@ header {
     background-color: #e6f7ee; /* 연한 초록 배경 */
     color: #20c997; /* 초록색 글씨 */
 }
-/* "특별과제 미완료" 또는 "챌린지 도전 중" */
+/* "특별과제 미완료" 또는 "챌린지 진행 중" */
 .dashboard-status-text.pending {
     background-color: #fff3cd; /* 연한 노랑 배경 */
     color: #856404; /* 어두운 노랑 글씨 */
