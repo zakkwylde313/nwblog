@@ -748,39 +748,151 @@ header {
 /* --- 반응형 디자인을 위한 미디어 쿼리 --- */
 @media (max-width: 768px) {
     body {
-        font-size: 14px; /* 태블릿 기본 폰트 크기 */
+        font-size: 14px; /* 모바일에서 기본 폰트 약간 줄임 */
     }
     .wrapper {
-        padding: 15px; /* 태블릿에서 wrapper 패딩 조정 */
+        padding: 15px; /* 전체적인 패딩 줄임 */
     }
-    .page-title { font-size: 1.57em; } /* 22px 정도 */
-    .controls { flex-direction: column; align-items: stretch; }
-    .filters { width: 100%; margin-bottom: 10px; }
-    .refresh-button { width: 100%; }
 
-    .summary-container { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
-    /* summary-card 내부 폰트 크기는 em단위로 되어있어 body 폰트 크기 변경에 따라 자동 조정됨 */
+    .page-header-top {
+        /* 제목과 로고가 너무 길면 로고를 아래로 내리거나, 제목 폰트 크기 조정 */
+        /* flex-direction: column; */ /* 아예 세로로 배치할 수도 있음 */
+        /* align-items: flex-start; */
+    }
+    h1.page-title {
+        font-size: 1.4em; /* 태블릿에서 제목 폰트 크기 */
+    }
+    #eie-main-logo {
+        height: 30px; /* 로고 크기 약간 줄임 */
+    }
+
+    .challenge-countdown-container {
+        font-size: 1em; /* 카운트다운 폰트 크기 */
+        padding: 8px;
+    }
+    #time-remaining-display {
+        display: block; /* 남은 시간을 다음 줄로 내림 (선택 사항) */
+        margin-left: 0;
+        margin-top: 3px;
+    }
+
+    #auth-container, #admin-controls {
+        font-size: 0.9em; /* 내부 요소들 크기 조절 */
+    }
+    #login-form {
+        flex-direction: column; /* 로그인 폼 세로 배치 */
+        gap: 8px;
+    }
+    #login-form input, #login-form button {
+        width: 100%; /* 입력창, 버튼 너비 100% */
+        margin-right: 0;
+    }
+    #admin-controls button {
+        display: block; /* 관리자 버튼 세로 배치 */
+        width: 100%;
+        margin-bottom: 8px;
+        margin-left: 0;
+    }
+    #admin-controls button:last-child { margin-bottom: 0; }
+
+
+    .controls {
+        flex-direction: column; /* 필터와 새로고침 버튼 세로 정렬 */
+        align-items: stretch; /* 너비 100% 채우도록 */
+    }
+    .filters {
+        width: 100%;
+        margin-bottom: 10px;
+        flex-direction: column; /* 필터 드롭다운도 세로로 */
+        gap: 8px;
+    }
+    .filters select {
+        width: 100%;
+    }
+    .refresh-button {
+        width: 100%;
+        justify-content: center; /* 새로고침 버튼 텍스트 중앙 정렬 */
+    }
+
+    .summary-container {
+        grid-template-columns: 1fr; /* !!!! 요약 카드 한 줄에 하나씩 !!!! */
+        gap: 12px;
+    }
+
+    /* !!!! 대시보드 테이블 모바일 최적화 !!!! */
+    .blog-dashboard {
+        font-size: 0.88em; /* 테이블 폰트 약간 줄임 */
+    }
+    .blog-dashboard th,
+    .blog-dashboard td {
+        padding: 10px 8px; /* 셀 패딩 줄임 */
+        white-space: normal; /* !!!! 모바일에서는 내용 줄바꿈 허용 !!!! */
+    }
+    /* 모바일에서 덜 중요한 열 숨기기 (예시) */
+    .blog-dashboard .col-cumulative-record, /* 누적 기록 */
+    .blog-dashboard .col-last-post-date,  /* 최근 포스팅 일시 */
+    .blog-dashboard .col-actions          /* 바로가기 버튼 열 */
+    {
+        display: none; /* 화면에서 숨김 */
+    }
+    .blog-dashboard .col-profile { /* 프로필 이미지 열도 숨기거나 크기 더 줄임 */
+        /* display: none; */
+        width: 35px;
+    }
+    .dashboard-profile-img {
+        width: 24px; height: 24px;
+    }
+    .blog-dashboard .col-name { min-width: 100px; } /* 이름 열 최소 너비 조정 */
 }
+
 
 @media (max-width: 480px) {
     body {
-        font-size: 13px; /* 모바일 기본 폰트 크기 */
+        font-size: 13px;
     }
     .wrapper {
-        padding: 10px; /* 모바일에서 wrapper 패딩 조정 */
+        padding: 10px;
     }
-    .page-title { font-size: 1.54em; margin-bottom: 15px; } /* 20px 정도 */
+    h1.page-title {
+        font-size: 1.3em; /* 제목 더 작게 */
+    }
+    #eie-main-logo {
+        height: 28px; /* 로고 더 작게 */
+    }
+    .challenge-countdown-container {
+        font-size: 0.95em;
+    }
 
-    .filters select, .refresh-button { font-size: 1em; padding: 8px 10px;}
+    .summary-card {
+        padding: 15px; /* 요약 카드 내부 패딩 조정 */
+    }
+    .summary-card .text-content .value {
+        font-size: 1.6em; /* 요약 카드 숫자 크기 조정 */
+    }
+    
+    .blog-dashboard table {
+        font-size: 0.82em; /* 테이블 폰트 더 줄임 */
+    }
+    .blog-dashboard th,
+    .blog-dashboard td {
+        padding: 8px 6px; /* 셀 패딩 더 줄임 */
+    }
+    /* 더 작은 화면에서는 더 많은 열을 숨길 수 있음 */
+    .blog-dashboard .col-total-posts { /* 예: 총 포스팅 수도 숨김 */
+        /* display: none; */
+    }
 
-    .summary-card { flex-basis: 100%; }
-
-    #blog-list li { flex-direction: column; align-items: stretch; }
-    .blog-item-rank { margin-bottom: 8px; align-self: flex-start; }
-    .blog-item-header { flex-direction: column; align-items: flex-start; }
-    .blog-item-status { margin-top: 4px; }
-
-    .toast-notification { bottom: 10px; right: 10px; left: 10px; width: auto; }
+    /* 상세 블로그 목록 아이템 내부 요소들 폰트/여백 조정 */
+    #blog-list li {
+        padding: 15px;
+        gap: 10px;
+    }
+    .blog-item-title { font-size: 1.1em; }
+    .challenge-counts-inline { font-size: 0.8em; margin-right: 6px;}
+    .blog-item-status { font-size: 0.75em; padding: 2px 6px; }
+    .special-mission-status { font-size: 0.75em; }
+    .blog-item-stats { font-size: 0.85em; padding: 6px; }
+    .blog-item-recent-posts { font-size: 0.85em; }
 }
 
 /* --- 모달창 스타일 시작 --- */
