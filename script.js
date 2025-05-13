@@ -1,35 +1,37 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() { // !!!! async 추가 !!!!
 
-    // --- Firebase 앱 초기화 ---
-    const firebaseConfig = {
-        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
-    };
+    let firebaseConfig = null;
 
-    if (!firebase.apps.length) {
-        // Vercel 배포 환경에서는 process.env.NEXT_PUBLIC_... 값들이 빌드 시점에 실제 값으로 치환됩니다.
-        // 로컬에서 vercel dev로 실행할 때는 .env.local 파일의 값을 사용하거나, Vercel Link를 통해 가져옵니다.
-        // 만약 이 값들이 undefined라면, Vercel 환경 변수 설정이 안 됐거나, 로컬에서 .env.local 파일이 없거나,
-        // Vercel Link가 제대로 안 된 경우입니다.
-        if (firebaseConfig.apiKey && firebaseConfig.projectId && 
-            !firebaseConfig.apiKey.startsWith("YOUR_") && // 이전 placeholder가 아닌지 확인
-            !firebaseConfig.apiKey.startsWith("MISSING_")) { 
-            firebase.initializeApp(firebaseConfig);
-            console.log("Firebase 앱 초기화 성공 (환경 변수 사용)");
-        } else {
-            console.error("Firebase 설정값이 Vercel 환경 변수에서 제대로 로드되지 않았습니다! Vercel 대시보드 환경 변수 설정을 확인해주세요. 로컬 테스트 시에는 .env.local 파일도 확인하세요.");
-            // 화면에 치명적인 오류 메시지 표시
-            const bodyElement = document.querySelector('body');
-            if (bodyElement) {
-                bodyElement.innerHTML = '<div style="padding: 20px; text-align: center; background-color: #ffebee; color: #c62828; border: 1px solid #ef9a9a; border-radius: 5px; margin: 20px;"><h1>⚠️ Firebase 설정 오류!</h1><p>웹사이트가 Firebase에 연결할 수 없습니다. 관리자에게 문의해주세요. (환경 변수 확인 필요)</p></div>';
-            }
+    // --- 1. 서버리스 함수에서 Firebase 설정값 가져오기 ---
+    try {
+        console.log("Fetching Firebase config from API (/api/get-firebase-config)...");
+        const response = await fetch('/api/get-firebase-config'); // 새 서버리스 함수 호출
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Firebase 설정 가져오기 API 실패: ${response.status} - ${errorText}`);
         }
+        firebaseConfig = await response.json();
+        console.log("Successfully fetched Firebase config. Project ID:", firebaseConfig.projectId ? firebaseConfig.projectId : "ProjectID missing in fetched config");
+
+        if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+            throw new Error("API로부터 받은 Firebase 설정값에 apiKey 또는 projectId가 없습니다.");
+        }
+
+    } catch (error) {
+        console.error("Firebase 설정값을 가져오는 중 치명적인 오류 발생:", error);
+        const bodyElement = document.querySelector('body');
+        if (bodyElement) {
+            bodyElement.innerHTML = '<div style="padding: 20px; text-align: center; background-color: #ffebee; color: #c62828; border: 1px solid #ef9a9a; border-radius: 5px; margin: 20px;"><h1>⚠️ Firebase 연결 설정 오류!</h1><p>웹사이트의 주요 설정을 불러올 수 없습니다. 잠시 후 다시 시도해주세요. (API 호출 실패)</p></div>';
+        }
+        return; // 설정값 없이는 아무것도 못함
+    }
+
+    // --- 2. 가져온 설정값으로 Firebase 앱 초기화 ---
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+        console.log("Firebase 앱 초기화 성공 (API로부터 받은 설정값 사용)");
     } else {
-        firebase.app(); // 이미 초기화되었다면 기존 앱 사용
+        firebase.app();
     }
 
     const db = firebase.firestore();
