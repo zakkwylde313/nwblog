@@ -103,13 +103,13 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
     function updateChallengeCountdown() {
         if (!nextChallengeDayDisplay || !timeRemainingDisplay) return;
 
-        // 마감일 텍스트만 하드코딩
+        // 마감일 하드코딩
         nextChallengeDayDisplay.textContent = `챌린지 마감 기한: 2025년 05월 25일 까지`;
 
-        // 기존 로직은 그대로 유지
-        const deadline = getCurrentChallengeDeadline ? getCurrentChallengeDeadline() : new Date('2025-05-25T00:00:00+09:00');
+        // 남은 시간도 하드코딩된 마감일 기준으로 계산
+        const hardcodedDeadline = new Date('2025-05-25T00:00:00+09:00');
         const now = new Date();
-        const timeLeft = deadline.getTime() - now.getTime();
+        const timeLeft = hardcodedDeadline.getTime() - now.getTime();
 
         if (timeLeft <= 0) {
             timeRemainingDisplay.textContent = "(마감! 다음 주기를 기다려주세요)";
