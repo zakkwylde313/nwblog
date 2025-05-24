@@ -2,13 +2,22 @@
 document.addEventListener('DOMContentLoaded', async function() {
     // Firebase 설정값을 환경 변수에서 가져오기
     const firebaseConfig = {
-        apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-        authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-        projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-        storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-        appId: import.meta.env.VITE_FIREBASE_APP_ID
+        apiKey: import.meta.env.VITE_FIREBASE_API_KEY || process.env.VITE_FIREBASE_API_KEY,
+        authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || process.env.VITE_FIREBASE_AUTH_DOMAIN,
+        projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID,
+        storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+        appId: import.meta.env.VITE_FIREBASE_APP_ID || process.env.VITE_FIREBASE_APP_ID
     };
+
+    console.log('Firebase Config:', {
+        apiKey: firebaseConfig.apiKey ? '설정됨' : '설정되지 않음',
+        authDomain: firebaseConfig.authDomain ? '설정됨' : '설정되지 않음',
+        projectId: firebaseConfig.projectId ? '설정됨' : '설정되지 않음',
+        storageBucket: firebaseConfig.storageBucket ? '설정됨' : '설정되지 않음',
+        messagingSenderId: firebaseConfig.messagingSenderId ? '설정됨' : '설정되지 않음',
+        appId: firebaseConfig.appId ? '설정됨' : '설정되지 않음'
+    });
 
     // Firebase 초기화
     if (!firebase.apps.length) {

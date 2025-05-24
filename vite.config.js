@@ -11,13 +11,12 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
+        changeOrigin: true
       }
     }
   },
-  // 환경 변수 설정
   define: {
     'process.env': process.env
-  }
+  },
+  envPrefix: ['VITE_', 'FIREBASE_']  // VITE_와 FIREBASE_ 접두사를 가진 환경 변수 허용
 }); 
