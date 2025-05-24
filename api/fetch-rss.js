@@ -1,29 +1,28 @@
 // api/fetch-rss.js
 
-const Parser = require('rss-parser');
-const parser = new Parser({ timeout: 10000, headers: {'User-Agent': 'BlogChallengeBot/1.0'} });
+const express = require('express');
+const cors = require('cors');
 const admin = require('firebase-admin');
+const Parser = require('rss-parser');
+const parser = new Parser();
 const fs = require('fs');
 const path = require('path');
 
+const app = express();
+app.use(cors());
+app.use(express.json());
+
 // Firebase Admin SDK 초기화
 try {
-    if (!admin.apps.length) {
-        // 서비스 계정 키 파일 경로
-        const serviceAccountPath = path.join(__dirname, 'firebase-service-account.json');
-        
-        if (!fs.existsSync(serviceAccountPath)) {
-            throw new Error('Firebase 서비스 계정 키 파일이 없습니다. firebase-service-account.json 파일을 api 폴더에 추가해주세요.');
-        }
+    // 환경 변수에서 서비스 계정 정보 가져오기
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY_JSON);
 
-        const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-        admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount)
-        });
-        console.log("Firebase Admin SDK 초기화 성공");
-    }
-} catch (e) {
-    console.error('Firebase Admin SDK 초기화 실패:', e.message);
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+    });
+    console.log('Firebase Admin SDK 초기화 성공');
+} catch (error) {
+    console.error('Firebase Admin SDK 초기화 실패:', error);
 }
 
 const CHALLENGE_EPOCH_START_DATE_STRING = '2025-05-10T00:00:00+09:00'; // 챌린지 대주기 시작일 (KST)
