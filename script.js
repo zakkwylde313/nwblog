@@ -1,13 +1,13 @@
 document.addEventListener('DOMContentLoaded', async function() { // !!!! async 추가 !!!!
 
-    // Firebase 설정값 직접 설정
+    // Firebase 설정값 실제 값으로 변경
     const firebaseConfig = {
-        apiKey: "AIzaSyDXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-        authDomain: "your-project-id.firebaseapp.com",
-        projectId: "your-project-id",
-        storageBucket: "your-project-id.appspot.com",
-        messagingSenderId: "your-messaging-sender-id",
-        appId: "your-app-id"
+        apiKey: "AIzaSyA-j8vIIikH2jbBOvRsKJogBL06a-hHapI",
+        authDomain: "nwblog-daa43.firebaseapp.com",
+        projectId: "nwblog-daa43",
+        storageBucket: "nwblog-daa43.appspot.com",
+        messagingSenderId: "796227461113",
+        appId: "1:796227461113:web:6a2edffe1d90641bd06728"
     };
 
     // Firebase 초기화
@@ -103,12 +103,13 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
     function updateChallengeCountdown() {
         if (!nextChallengeDayDisplay || !timeRemainingDisplay) return;
 
-        // 하드코딩된 마감일 (2025년 5월 25일 00:00 KST)
-        const hardcodedDeadline = new Date('2025-05-25T00:00:00+09:00');
-        const now = new Date();
-        const timeLeft = hardcodedDeadline.getTime() - now.getTime();
-
+        // 마감일 텍스트만 하드코딩
         nextChallengeDayDisplay.textContent = `챌린지 마감 기한: 2025년 05월 25일 까지`;
+
+        // 기존 로직은 그대로 유지
+        const deadline = getCurrentChallengeDeadline ? getCurrentChallengeDeadline() : new Date('2025-05-25T00:00:00+09:00');
+        const now = new Date();
+        const timeLeft = deadline.getTime() - now.getTime();
 
         if (timeLeft <= 0) {
             timeRemainingDisplay.textContent = "(마감! 다음 주기를 기다려주세요)";
