@@ -102,23 +102,20 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
 
     function updateChallengeCountdown() {
         if (!nextChallengeDayDisplay || !timeRemainingDisplay) return;
-        const deadline = getCurrentChallengeDeadline();
+
+        // 하드코딩된 마감일 (2025년 5월 25일 00:00 KST)
+        const hardcodedDeadline = new Date('2025-05-25T00:00:00+09:00');
         const now = new Date();
-        const timeLeft = deadline.getTime() - now.getTime();
-        
-        // 현재 시점이 시작일 이전이면 "첫 번째 챌린지 시작까지" 메시지 표시
-        if (now < new Date(CHALLENGE_EPOCH_START_DATE_STRING)) {
-            nextChallengeDayDisplay.textContent = `첫 번째 챌린지 시작: ${formatKoreanDate(CHALLENGE_EPOCH_START_DATE_STRING, false)}`;
-        } else {
-            nextChallengeDayDisplay.textContent = `챌린지 마감 기한: ${formatKoreanDate(deadline, false)} 까지`;
-        }
-        
+        const timeLeft = hardcodedDeadline.getTime() - now.getTime();
+
+        nextChallengeDayDisplay.textContent = `챌린지 마감 기한: 2025년 05월 25일 까지`;
+
         if (timeLeft <= 0) {
             timeRemainingDisplay.textContent = "(마감! 다음 주기를 기다려주세요)";
             if (countdownIntervalId) clearInterval(countdownIntervalId);
             return;
         }
-        
+
         const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
         const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
