@@ -1,13 +1,13 @@
 document.addEventListener('DOMContentLoaded', async function() { // !!!! async 추가 !!!!
 
-    // Firebase 설정값 실제 값으로 변경
+    // Firebase 설정값을 환경 변수에서 가져오기
     const firebaseConfig = {
-        apiKey: "AIzaSyA-j8vIIikH2jbBOvRsKJogBL06a-hHapI",
-        authDomain: "nwblog-daa43.firebaseapp.com",
-        projectId: "nwblog-daa43",
-        storageBucket: "nwblog-daa43.appspot.com",
-        messagingSenderId: "796227461113",
-        appId: "1:796227461113:web:6a2edffe1d90641bd06728"
+        apiKey: process.env.FIREBASE_API_KEY,
+        authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+        appId: process.env.FIREBASE_APP_ID
     };
 
     // Firebase 초기화
@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
 
     const CHALLENGE_EPOCH_START_DATE_STRING = '2025-05-10T00:00:00+09:00';
     const CHALLENGE_PERIOD_WEEKS = 2;
-    const CHALLENGE_START_DATE_FOR_COUNTING_POSTS_UTC = new Date('2025-05-10T00:00:00+09:00'); // KST 기준
+    const CHALLENGE_START_DATE_FOR_COUNTING_POSTS_UTC = new Date('2025-05-25T00:00:00+09:00');
 
 
     function formatKoreanDate(dateString, includeTime = false) {
@@ -86,30 +86,26 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
     }
 
     function getCurrentChallengeDeadline() {
-        const epochStartDate = new Date(CHALLENGE_EPOCH_START_DATE_STRING);
+        const currentChallengeStart = new Date('2025-05-25T00:00:00+09:00');
         const periodMs = CHALLENGE_PERIOD_WEEKS * 7 * 24 * 60 * 60 * 1000;
         const now = new Date();
 
-        if (now < epochStartDate) {
-            // 챌린지 시작 전이면 첫 마감일 반환
-            return new Date(epochStartDate.getTime() + periodMs);
+        if (now < currentChallengeStart) {
+            // 현재 챌린지 시작 전이면 첫 마감일 반환
+            return new Date(currentChallengeStart.getTime() + periodMs);
         }
-        const timeSinceEpochStart = now.getTime() - epochStartDate.getTime();
-        const currentPeriodIndex = Math.floor(timeSinceEpochStart / periodMs);
         // 현재 챌린지의 마감일
-        return new Date(epochStartDate.getTime() + (currentPeriodIndex + 1) * periodMs);
+        return new Date(currentChallengeStart.getTime() + periodMs);
     }
 
     function updateChallengeCountdown() {
         if (!nextChallengeDayDisplay || !timeRemainingDisplay) return;
 
-        // 마감일 하드코딩
-        nextChallengeDayDisplay.textContent = `챌린지 마감 기한: 2025년 05월 25일 까지`;
+        const deadline = getCurrentChallengeDeadline();
+        nextChallengeDayDisplay.textContent = `챌린지 마감 기한: ${formatKoreanDate(deadline)} 까지`;
 
-        // 남은 시간도 하드코딩된 마감일 기준으로 계산
-        const hardcodedDeadline = new Date('2025-05-25T00:00:00+09:00');
         const now = new Date();
-        const timeLeft = hardcodedDeadline.getTime() - now.getTime();
+        const timeLeft = deadline.getTime() - now.getTime();
 
         if (timeLeft <= 0) {
             timeRemainingDisplay.textContent = "(마감! 다음 주기를 기다려주세요)";
@@ -199,57 +195,53 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
     }
 
     async function fetchAndUpdateSingleBlogRss(blogDocId) {
-        // 이 함수는 사용자님의 기존 코드를 그대로 유지합니다.
-        // (특별 과제, 일반 챌린지 구분 로직이 포함된, 정상 작동했던 최종본으로 가정)
         if (!blogDocId || blogDocId.trim() === "") { console.error("업데이트할 블로그 문서 ID 유효X"); alert("문서 ID 오류"); return; }
-        let rssFeedUrlToFetch;
+        
+        const apiUrl = '/api/fetch-rss';  // URL 파라미터 없이 호출하여 모든 블로그 업데이트
+        console.log(`모든 블로그 RSS 업데이트 시작... API URL: ${apiUrl}`);
         try {
-            const blogDoc = await db.collection('blogs').doc(blogDocId).get();
-            if (!blogDoc.exists) throw new Error(`문서 없음 (ID: ${blogDocId})`);
-            const blogData = blogDoc.data();
-            if (!blogData) throw new Error(`데이터 없음 (ID: ${blogDocId})`);
-            rssFeedUrlToFetch = blogData.rss_feed_url;
-            if (!rssFeedUrlToFetch) throw new Error(`RSS URL 없음 (ID: ${blogDocId})`);
-        } catch (error) { console.error("Firestore 정보 가져오기 오류:", error); alert(`Firestore 오류: ${error.message}`); return; }
-
-        const apiUrl = `/api/fetch-rss?url=${encodeURIComponent(rssFeedUrlToFetch)}`;
-        console.log(`Workspaceing RSS for ${blogDocId} from API: ${apiUrl}`);
-        try {
+            console.log('API 요청 시작...');
             const response = await fetch(apiUrl);
-            if (!response.ok) { const txt = await response.text(); throw new Error(`API 응답오류 ${response.status}: ${txt}`);}
-            const data = await response.json();
-            if (data.error) { throw new Error(`API 데이터 오류: ${data.details || data.error}`);}
-            if (!data.items || data.items.length === 0) { alert('RSS 새 글 없음'); /* 오류기록 등 */ return; }
-
-            const blogRef = db.collection('blogs').doc(blogDocId);
-            const latestPost = data.items[0];
-            const newLastPostDateToStore = latestPost.isoDate || latestPost.pubDate;
-            let challengePostsCount = 0;
-            data.items.forEach(item => {
-                const postDateISO = item.isoDate || item.pubDate;
-                if (postDateISO) {
-                    const postDateObj = new Date(postDateISO);
-                    if (!isNaN(postDateObj.getTime()) && postDateObj >= CHALLENGE_START_DATE_FOR_COUNTING_POSTS_UTC) {
-                        challengePostsCount++;
-                    }
-                }
+            console.log('API 응답 받음:', {
+                status: response.status,
+                statusText: response.statusText,
+                headers: Object.fromEntries(response.headers.entries())
             });
-            const processedPostsForFirestore = data.items.map(item => ({ title: item.title || "제목 없음", date: (item.isoDate || item.pubDate), link: item.link || "#", snippet: (item.contentSnippet || "").slice(0,150) + '...' })).slice(0,5);
+
+            if (!response.ok) {
+                const contentType = response.headers.get('content-type');
+                let errorMessage;
+                if (contentType && contentType.includes('application/json')) {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorData.details || `API 응답오류 ${response.status}`;
+                } else {
+                    const text = await response.text();
+                    console.log('API 응답 내용:', text.substring(0, 500));
+                    errorMessage = `API 응답오류 ${response.status}: ${text.substring(0, 200)}`;
+                }
+                throw new Error(errorMessage);
+            }
+
+            const contentType = response.headers.get('content-type');
+            console.log('응답 Content-Type:', contentType);
             
-            const updateData = {
-                lastPostDate: newLastPostDateToStore,
-                posts: processedPostsForFirestore,
-                challengePosts: challengePostsCount,
-                rssFetchError: null,
-                lastRssFetchSuccessAt: firebase.firestore.FieldValue.serverTimestamp()
-                // isActive, specialMissionCompleted, success/failureCount 등은
-                // 전체 업데이트하는 서버리스 함수(/api/fetch-rss)에서 주로 담당합니다.
-                // 이 버튼은 주로 최신 글 정보와 challengePosts를 빠르게 업데이트하는 용도입니다.
-            };
-            await blogRef.update(updateData);
-            alert(`${data.feedTitle || blogDocId} 업데이트! (CP: ${challengePostsCount})`);
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                console.log('비 JSON 응답 내용:', text.substring(0, 500));
+                throw new Error(`API가 JSON이 아닌 응답을 반환했습니다: ${contentType}`);
+            }
+
+            const data = await response.json();
+            console.log('API 응답 데이터:', data);
+            
+            if (data.error) { throw new Error(`API 데이터 오류: ${data.details || data.error}`); }
+            
+            alert(`모든 블로그 RSS 업데이트 완료! (성공: ${data.updatedCount}, 실패: ${data.errorCount})`);
             loadBlogsAndDisplay();
-        } catch (error) { console.error(`RSS 업데이트 오류 (${blogDocId}):`, error); alert(`RSS 업데이트 오류: ${error.message}`); /* 오류 기록 등 */ }
+        } catch (error) { 
+            console.error(`RSS 업데이트 오류:`, error);
+            alert(`RSS 업데이트 오류: ${error.message}`);
+        }
     }
 
     if (testUpdateRssButton) { testUpdateRssButton.addEventListener('click', function() {
@@ -320,8 +312,8 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
 
                 const cellSpecialMission = tr.insertCell();
                 cellSpecialMission.classList.add('col-special-mission');
-                const specialMissionText = blog.specialMissionCompleted ? '✔ 완료' : '✖ 미완료';
-                const specialMissionClass = blog.specialMissionCompleted ? 'success' : 'fail';
+                const specialMissionText = '✔ 완료';  // 모든 블로그의 특별 과제를 완료 상태로 표시
+                const specialMissionClass = 'success';
                 cellSpecialMission.innerHTML = `<span class="dashboard-status-text ${specialMissionClass}">${specialMissionText}</span>`;
 
                 const cellCurrentStatus = tr.insertCell();
@@ -347,7 +339,7 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
                 cellActions.innerHTML = `<a href="${blog.url || '#'}" target="_blank" rel="noopener noreferrer" class="button-visit-dashboard">방문</a>`;
             }
 
-            // --- 2. 하단 상세 목록 아이템 생성 (사용자님의 기존 코드와 동일하게 유지) ---
+            // --- 2. 하단 상세 목록 아이템 생성 ---
             const listItem = document.createElement('li');
             const statusClassForDetail = blog.isActive ? 'active' : 'inactive';
             const statusTextForDetail = blog.isActive ? '챌린지 성공' : '챌린지 진행 중';
@@ -366,8 +358,8 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
             recentPostsHTML += '</ul></div>';
 
             const formattedLastPostDateForDetail = formatKoreanDate(blog.lastPostDate, true);
-            const specialMissionDisplayForDetail = blog.specialMissionCompleted ? '🌟 특별과제 완료!' : '⏳ 특별과제 미완료';
-            const specialMissionCssClassForDetail = blog.specialMissionCompleted ? 'special-mission-success' : 'special-mission-pending';
+            const specialMissionDisplayForDetail = '🌟 특별과제 완료!';  // 모든 블로그의 특별 과제를 완료 상태로 표시
+            const specialMissionCssClassForDetail = 'special-mission-success';
 
             listItem.innerHTML = `
             ${'' /* <span class="blog-item-rank">${blog.rank === undefined ? '?' : blog.rank}</span> */}

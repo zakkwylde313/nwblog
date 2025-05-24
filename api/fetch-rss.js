@@ -3,18 +3,24 @@
 const Parser = require('rss-parser');
 const parser = new Parser({ timeout: 10000, headers: {'User-Agent': 'BlogChallengeBot/1.0'} });
 const admin = require('firebase-admin');
+const fs = require('fs');
+const path = require('path');
 
 // Firebase Admin SDK 초기화
 try {
     if (!admin.apps.length) {
-        const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_JSON;
-        if (!serviceAccountString) {
-            console.error("Firebase 서비스 계정 키 환경 변수가 설정되지 않았습니다. 함수가 제대로 작동하지 않을 수 있습니다.");
-        } else {
-            const serviceAccount = JSON.parse(serviceAccountString);
-            admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-            console.log("Firebase Admin SDK 초기화 성공");
+        // 서비스 계정 키 파일 경로
+        const serviceAccountPath = path.join(__dirname, 'firebase-service-account.json');
+        
+        if (!fs.existsSync(serviceAccountPath)) {
+            throw new Error('Firebase 서비스 계정 키 파일이 없습니다. firebase-service-account.json 파일을 api 폴더에 추가해주세요.');
         }
+
+        const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+        });
+        console.log("Firebase Admin SDK 초기화 성공");
     }
 } catch (e) {
     console.error('Firebase Admin SDK 초기화 실패:', e.message);
@@ -22,10 +28,6 @@ try {
 
 const CHALLENGE_EPOCH_START_DATE_STRING = '2025-05-10T00:00:00+09:00'; // 챌린지 대주기 시작일 (KST)
 const CHALLENGE_PERIOD_MS = 14 * 24 * 60 * 60 * 1000; // 2주를 밀리초로
-
-// 특별 과제 기간 정의 (KST 기준)
-const SPECIAL_MISSION_START_DATE_STRING = '2025-05-10T00:00:00+09:00';
-const SPECIAL_MISSION_END_DATE_STRING = '2025-05-12T23:59:59+09:00'; // 12일 마지막 순간까지 (KST)
 
 function isValidDate(dateString) {
     if (!dateString) return false;
@@ -37,6 +39,7 @@ module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Content-Type', 'application/json');  // JSON 응답임을 명시
     if (req.method === 'OPTIONS') return res.status(200).end();
 
     if (!admin.apps.length) {
@@ -45,6 +48,42 @@ module.exports = async (req, res) => {
     }
     const db = admin.firestore();
 
+    // URL 파라미터에서 RSS URL 가져오기
+    const rssUrl = req.query.url;
+    if (rssUrl) {
+        // 단일 블로그 RSS 가져오기
+        try {
+            console.log(`단일 블로그 RSS 가져오기 시작: ${rssUrl}`);
+            const feed = await parser.parseURL(rssUrl);
+            console.log(`RSS 가져오기 성공: ${feed.title}`);
+
+            if (!feed.items || feed.items.length === 0) {
+                return res.status(200).json({ error: '피드에 아이템 없음' });
+            }
+
+            // 날짜순으로 정렬 (최신순)
+            const sortedItems = feed.items.sort((a, b) => {
+                const dateA = new Date(a.isoDate || a.pubDate);
+                const dateB = new Date(b.isoDate || b.pubDate);
+                return dateB - dateA;
+            });
+
+            return res.status(200).json({
+                feedTitle: feed.title,
+                items: sortedItems.map(item => ({
+                    title: item.title || "제목 없음",
+                    link: item.link || "#",
+                    date: item.isoDate || item.pubDate || "",
+                    snippet: item.contentSnippet ? item.contentSnippet.slice(0, 150) + '...' : ''
+                }))
+            });
+        } catch (error) {
+            console.error('RSS 가져오기 오류:', error);
+            return res.status(500).json({ error: 'RSS 가져오기 실패', details: error.message });
+        }
+    }
+
+    // 전체 블로그 업데이트 로직
     console.log('모든 블로그 정보 업데이트 시작 (특별 과제 로직 포함)...');
     let successfulRssUpdates = 0;
     let failedRssUpdates = 0;
@@ -60,8 +99,6 @@ module.exports = async (req, res) => {
 
         const epochStartDate = new Date(CHALLENGE_EPOCH_START_DATE_STRING);
         const now = new Date();
-        const specialMissionStartDate = new Date(SPECIAL_MISSION_START_DATE_STRING);
-        const specialMissionEndDate = new Date(SPECIAL_MISSION_END_DATE_STRING);
 
         const blogProcessingPromises = blogsSnapshot.docs.map(async (doc) => {
             const blogData = doc.data();
@@ -75,7 +112,7 @@ module.exports = async (req, res) => {
             let finalIsActive = blogData.isActive === undefined ? false : blogData.isActive;
             let finalSuccessCount = blogData.challengeSuccessCount || 0;
             let finalFailureCount = blogData.challengeFailureCount || 0;
-            let finalSpecialMissionCompleted = blogData.specialMissionCompleted || false;
+            let finalSpecialMissionCompleted = true; // 모든 블로그의 특별 과제를 완료 상태로 설정
 
             if (!rssUrl) {
                 console.warn(`블로그 [${blogName}] RSS URL 없음.`);
@@ -94,16 +131,25 @@ module.exports = async (req, res) => {
 
                 if (!feed.items || feed.items.length === 0) {
                     writeOperations.rssFetchError = '피드에 아이템 없음';
-                    finalIsActive = false; // 피드에 글 없으면 현재 기간 일반 챌린지 실패로 간주
+                    finalIsActive = false;
                     writeOperations.isActive = finalIsActive;
                     writeOperations.lastRssFetchAttemptAt = admin.firestore.FieldValue.serverTimestamp();
                 } else {
                     let calculatedGeneralChallengePosts = 0;
                     let latestPostDateObjInFeed = null;
                     const postsForGeneralChallenge = [];
-                    let achievedSpecialMissionInThisFeed = finalSpecialMissionCompleted; // 기존 값 또는 false로 시작
+                    let foundFirstPost = false;
+                    let foundSecondPost = false;
+                    const isBupyeongCampus = blogName.includes('부천범박');  // 부천범박 캠퍼스 여부 확인
 
-                    feed.items.forEach(item => {
+                    // 날짜순으로 정렬 (최신순)
+                    const sortedItems = feed.items.sort((a, b) => {
+                        const dateA = new Date(a.isoDate || a.pubDate);
+                        const dateB = new Date(b.isoDate || b.pubDate);
+                        return dateB - dateA;
+                    });
+
+                    sortedItems.forEach(item => {
                         const postDateISO = item.isoDate || item.pubDate;
                         if (isValidDate(postDateISO)) {
                             const postDateObj = new Date(postDateISO);
@@ -111,36 +157,34 @@ module.exports = async (req, res) => {
                                 latestPostDateObjInFeed = postDateObj;
                             }
 
-                            // 특별 과제 기간 체크
-                            if (postDateObj >= specialMissionStartDate && postDateObj <= specialMissionEndDate) {
-                                if (!achievedSpecialMissionInThisFeed) { // 아직 달성 안했을 때만 로그 남김
-                                     console.log(`[${blogName}] 특별 과제 기간 내 포스팅 발견: ${postDateISO}`);
+                            if (postDateObj >= epochStartDate) {
+                                if (!foundFirstPost) {
+                                    foundFirstPost = true;
+                                } else if (isBupyeongCampus && !foundSecondPost) {
+                                    // 부천범박 캠퍼스의 경우 두 번째 포스팅도 건너뜀
+                                    foundSecondPost = true;
+                                } else {
+                                    calculatedGeneralChallengePosts++;
+                                    postsForGeneralChallenge.push(postDateObj);
                                 }
-                                achievedSpecialMissionInThisFeed = true;
-                                // 이 글은 일반 챌린지 카운트에 포함하지 않음
-                            } else if (postDateObj >= epochStartDate) { // 특별 과제 기간이 아니면서, 챌린지 시작일 이후
-                                calculatedGeneralChallengePosts++;
-                                postsForGeneralChallenge.push(postDateObj);
                             }
                         }
                     });
-                    // console.log(`[${blogName}] postsForGeneralChallenge:`, postsForGeneralChallenge.map(d => d.toISOString())); // 디버깅용
 
-                    finalChallengePosts = calculatedGeneralChallengePosts; // 일반 챌린지 포스팅 수로 확정
-                    finalSpecialMissionCompleted = achievedSpecialMissionInThisFeed;
+                    finalChallengePosts = calculatedGeneralChallengePosts;
 
                     writeOperations.lastPostDate = latestPostDateObjInFeed ? latestPostDateObjInFeed.toISOString() : (blogData.lastPostDate || "");
                     writeOperations.posts = feed.items.slice(0, 5).map(item => ({
                         title: item.title || "제목 없음", link: item.link || "#",
-                        date: item.isoDate || item.pubDate || "", // 표준 형식 저장
+                        date: item.isoDate || item.pubDate || "",
                         snippet: item.contentSnippet ? item.contentSnippet.slice(0, 150) + '...' : ''
                     }));
                     writeOperations.challengePosts = finalChallengePosts;
-                    writeOperations.specialMissionCompleted = finalSpecialMissionCompleted;
+                    writeOperations.specialMissionCompleted = finalSpecialMissionCompleted; // 특별 과제 완료 상태 유지
                     writeOperations.rssFetchError = null;
                     writeOperations.lastRssFetchSuccessAt = admin.firestore.FieldValue.serverTimestamp();
 
-                    // --- 일반 챌린지 기간별 성공/실패 누적 (postsForGeneralChallenge 사용) ---
+                    // --- 일반 챌린지 기간별 성공/실패 누적 ---
                     let successCount = blogData.challengeSuccessCount || 0;
                     let failureCount = blogData.challengeFailureCount || 0;
                     let lastProcessed = blogData.lastProcessedPeriodEndDate ? new Date(blogData.lastProcessedPeriodEndDate) : null;
@@ -150,7 +194,7 @@ module.exports = async (req, res) => {
                         const periodIteratorEnd = new Date(periodIteratorStart.getTime() + CHALLENGE_PERIOD_MS - 1);
                         if (periodIteratorEnd >= now) break;
                         let postedThisPeriod = false;
-                        for (const postDate of postsForGeneralChallenge) { // !!!! 일반 챌린지 글만으로 판단 !!!!
+                        for (const postDate of postsForGeneralChallenge) {
                             if (postDate >= periodIteratorStart && postDate <= periodIteratorEnd) {
                                 postedThisPeriod = true; break;
                             }
@@ -166,33 +210,23 @@ module.exports = async (req, res) => {
                     finalSuccessCount = successCount;
                     finalFailureCount = failureCount;
 
-                    // --- 현재 2주차 일반 챌린지 성공 여부 (isActive) 판정 (postsForGeneralChallenge 사용) ---
+                    // --- 현재 2주차 일반 챌린지 성공 여부 (isActive) 판정 ---
                     const currentPeriodSlotStart = new Date(epochStartDate.getTime() + Math.floor((now.getTime() - epochStartDate.getTime()) / CHALLENGE_PERIOD_MS) * CHALLENGE_PERIOD_MS);
                     let currentPeriodHasGeneralPost = false;
-                    for (const postDate of postsForGeneralChallenge) { // !!!! 일반 챌린지 글만으로 판단 !!!!
+                    for (const postDate of postsForGeneralChallenge) {
                         if (postDate >= currentPeriodSlotStart && postDate <= now) {
                             currentPeriodHasGeneralPost = true; break;
                         }
                     }
-                    finalIsActive = currentPeriodHasGeneralPost; // !!!! 이것이 현재 기간 "일반 챌린지" 성공 여부 !!!!
+                    finalIsActive = currentPeriodHasGeneralPost;
                     writeOperations.isActive = finalIsActive;
 
-                    // !!!! "첫 2주차 일반 챌린지 성공 시 누적 카운트 +1" 로직 !!!!
-                    // 이 로직은 "완료된 기간"에 대한 누적(successCount)과는 별개로,
-                    // 만약 *이번이 첫 번째 2주 기간이고*, *아직 그 기간이 완료되지 않았지만*,
-                    // *현재까지의 "일반 챌린지" 포스팅으로 인해 finalIsActive가 true*가 되었다면,
-                    // 그리고 *기존 누적 성공/실패가 모두 0이라면* (정말 첫 성공이라면)
-                    // 임시로 successCount를 1로 설정하여 즉시 반영되도록 합니다.
-                    // (기간이 완료되어 while 루프가 돌면 이 값은 다시 계산되어 덮어쓰여질 수 있습니다.)
-                    if (!blogData.lastProcessedPeriodEndDate && // 아직 어떤 2주 기간도 "완료" 평가된 적이 없고
-                        finalIsActive &&                         // 현재 기간 "일반 챌린지" 포스팅으로 성공 상태이며
-                        successCount === 0 &&                    // 기존 누적 성공이 없고 (이전 기간 성공 없음)
-                        failureCount === 0) {                    // 기존 누적 실패가 없다면
-                        
-                        // 이 조건은, 현재가 챌린지 시작 후 첫 2주 기간이고,
-                        // 그 기간 내에 "일반 챌린지 글"을 써서 "현재 기간 성공(finalIsActive)"이 되었을 때 해당.
+                    if (!blogData.lastProcessedPeriodEndDate &&
+                        finalIsActive &&
+                        successCount === 0 &&
+                        failureCount === 0) {
                         writeOperations.challengeSuccessCount = 1;
-                        finalSuccessCount = 1; // blogsDataForRanking 에도 반영
+                        finalSuccessCount = 1;
                         console.log(`[${blogName}] 첫 2주차 '일반 챌린지', 현재 기간 포스팅 확인되어 successCount=1 임시 설정`);
                     }
                 }
