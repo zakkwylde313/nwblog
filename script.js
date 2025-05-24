@@ -61,9 +61,9 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
     let visitedLinks = JSON.parse(localStorage.getItem('visitedBlogPosts')) || {};
     let countdownIntervalId = null;
 
-    const CHALLENGE_EPOCH_START_DATE_STRING = '2025-05-25T00:00:00+09:00';
+    const CHALLENGE_EPOCH_START_DATE_STRING = '2025-05-10T00:00:00+09:00';
     const CHALLENGE_PERIOD_WEEKS = 2;
-    const CHALLENGE_START_DATE_FOR_COUNTING_POSTS_UTC = new Date('2025-05-25T00:00:00+09:00'); // KST 기준
+    const CHALLENGE_START_DATE_FOR_COUNTING_POSTS_UTC = new Date('2025-05-10T00:00:00+09:00'); // KST 기준
 
 
     function formatKoreanDate(dateString, includeTime = false) {
