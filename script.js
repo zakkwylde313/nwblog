@@ -85,26 +85,24 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
         } catch (e) { console.warn("날짜 포맷 변경 중 오류:", dateString, e); return '날짜 변환 오류'; }
     }
 
-    function getNextChallengeDeadline() {
+    function getCurrentChallengeDeadline() {
         const epochStartDate = new Date(CHALLENGE_EPOCH_START_DATE_STRING);
-        const now = new Date();
-        
-        // 현재 시점이 시작일(5월 25일 자정) 이전이면 시작일을 반환
-        if (now < epochStartDate) {
-            return epochStartDate;
-        }
-        
-        // 현재 시점이 시작일 이후면 다음 챌린지 기간의 마감일을 계산
         const periodMs = CHALLENGE_PERIOD_WEEKS * 7 * 24 * 60 * 60 * 1000;
+        const now = new Date();
+
+        if (now < epochStartDate) {
+            // 챌린지 시작 전이면 첫 마감일 반환
+            return new Date(epochStartDate.getTime() + periodMs);
+        }
         const timeSinceEpochStart = now.getTime() - epochStartDate.getTime();
         const currentPeriodIndex = Math.floor(timeSinceEpochStart / periodMs);
-        const nextDeadlineTime = epochStartDate.getTime() + (currentPeriodIndex + 1) * periodMs;
-        return new Date(nextDeadlineTime);
+        // 현재 챌린지의 마감일
+        return new Date(epochStartDate.getTime() + (currentPeriodIndex + 1) * periodMs);
     }
 
     function updateChallengeCountdown() {
         if (!nextChallengeDayDisplay || !timeRemainingDisplay) return;
-        const deadline = getNextChallengeDeadline();
+        const deadline = getCurrentChallengeDeadline();
         const now = new Date();
         const timeLeft = deadline.getTime() - now.getTime();
         
