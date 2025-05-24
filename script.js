@@ -1,35 +1,19 @@
 document.addEventListener('DOMContentLoaded', async function() { // !!!! async 추가 !!!!
 
-    let firebaseConfig = null;
+    // Firebase 설정값 직접 설정
+    const firebaseConfig = {
+        apiKey: "AIzaSyDXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        authDomain: "your-project-id.firebaseapp.com",
+        projectId: "your-project-id",
+        storageBucket: "your-project-id.appspot.com",
+        messagingSenderId: "your-messaging-sender-id",
+        appId: "your-app-id"
+    };
 
-    // --- 1. 서버리스 함수에서 Firebase 설정값 가져오기 ---
-    try {
-        console.log("Fetching Firebase config from API (/api/get-firebase-config)...");
-        const response = await fetch('/api/get-firebase-config'); // 새 서버리스 함수 호출
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Firebase 설정 가져오기 API 실패: ${response.status} - ${errorText}`);
-        }
-        firebaseConfig = await response.json();
-        console.log("Successfully fetched Firebase config. Project ID:", firebaseConfig.projectId ? firebaseConfig.projectId : "ProjectID missing in fetched config");
-
-        if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-            throw new Error("API로부터 받은 Firebase 설정값에 apiKey 또는 projectId가 없습니다.");
-        }
-
-    } catch (error) {
-        console.error("Firebase 설정값을 가져오는 중 치명적인 오류 발생:", error);
-        const bodyElement = document.querySelector('body');
-        if (bodyElement) {
-            bodyElement.innerHTML = '<div style="padding: 20px; text-align: center; background-color: #ffebee; color: #c62828; border: 1px solid #ef9a9a; border-radius: 5px; margin: 20px;"><h1>⚠️ Firebase 연결 설정 오류!</h1><p>웹사이트의 주요 설정을 불러올 수 없습니다. 잠시 후 다시 시도해주세요. (API 호출 실패)</p></div>';
-        }
-        return; // 설정값 없이는 아무것도 못함
-    }
-
-    // --- 2. 가져온 설정값으로 Firebase 앱 초기화 ---
+    // Firebase 초기화
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
-        console.log("Firebase 앱 초기화 성공 (API로부터 받은 설정값 사용)");
+        console.log("Firebase 앱 초기화 성공");
     } else {
         firebase.app();
     }
@@ -77,9 +61,9 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
     let visitedLinks = JSON.parse(localStorage.getItem('visitedBlogPosts')) || {};
     let countdownIntervalId = null;
 
-    const CHALLENGE_EPOCH_START_DATE_STRING = '2025-05-10T00:00:00+09:00';
+    const CHALLENGE_EPOCH_START_DATE_STRING = '2025-05-25T00:00:00+09:00';
     const CHALLENGE_PERIOD_WEEKS = 2;
-    const CHALLENGE_START_DATE_FOR_COUNTING_POSTS_UTC = new Date(Date.UTC(2025, 4, 10, 0, 0, 0));
+    const CHALLENGE_START_DATE_FOR_COUNTING_POSTS_UTC = new Date('2025-05-25T00:00:00+09:00'); // KST 기준
 
 
     function formatKoreanDate(dateString, includeTime = false) {
@@ -104,8 +88,14 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
     function getNextChallengeDeadline() {
         const epochStartDate = new Date(CHALLENGE_EPOCH_START_DATE_STRING);
         const now = new Date();
+        
+        // 현재 시점이 시작일(5월 25일 자정) 이전이면 시작일을 반환
+        if (now < epochStartDate) {
+            return epochStartDate;
+        }
+        
+        // 현재 시점이 시작일 이후면 다음 챌린지 기간의 마감일을 계산
         const periodMs = CHALLENGE_PERIOD_WEEKS * 7 * 24 * 60 * 60 * 1000;
-        if (now < epochStartDate) { return new Date(epochStartDate.getTime() + periodMs); }
         const timeSinceEpochStart = now.getTime() - epochStartDate.getTime();
         const currentPeriodIndex = Math.floor(timeSinceEpochStart / periodMs);
         const nextDeadlineTime = epochStartDate.getTime() + (currentPeriodIndex + 1) * periodMs;
@@ -117,11 +107,20 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
         const deadline = getNextChallengeDeadline();
         const now = new Date();
         const timeLeft = deadline.getTime() - now.getTime();
-        nextChallengeDayDisplay.textContent = `챌린지 마감 기한: ${formatKoreanDate(deadline, false)} 까지`;
+        
+        // 현재 시점이 시작일 이전이면 "첫 번째 챌린지 시작까지" 메시지 표시
+        if (now < new Date(CHALLENGE_EPOCH_START_DATE_STRING)) {
+            nextChallengeDayDisplay.textContent = `첫 번째 챌린지 시작: ${formatKoreanDate(CHALLENGE_EPOCH_START_DATE_STRING, false)}`;
+        } else {
+            nextChallengeDayDisplay.textContent = `챌린지 마감 기한: ${formatKoreanDate(deadline, false)} 까지`;
+        }
+        
         if (timeLeft <= 0) {
             timeRemainingDisplay.textContent = "(마감! 다음 주기를 기다려주세요)";
-            if (countdownIntervalId) clearInterval(countdownIntervalId); return;
+            if (countdownIntervalId) clearInterval(countdownIntervalId);
+            return;
         }
+        
         const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
         const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));

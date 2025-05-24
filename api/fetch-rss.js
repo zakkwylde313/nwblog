@@ -20,12 +20,12 @@ try {
     console.error('Firebase Admin SDK 초기화 실패:', e.message);
 }
 
-const CHALLENGE_EPOCH_START_DATE_STRING = '2025-05-10T00:00:00Z'; // 챌린지 대주기 시작일 (UTC)
+const CHALLENGE_EPOCH_START_DATE_STRING = '2025-05-25T00:00:00+09:00'; // 챌린지 대주기 시작일 (KST)
 const CHALLENGE_PERIOD_MS = 14 * 24 * 60 * 60 * 1000; // 2주를 밀리초로
 
-// 특별 과제 기간 정의 (UTC 기준)
-const SPECIAL_MISSION_START_DATE_STRING = '2025-05-10T00:00:00Z';
-const SPECIAL_MISSION_END_DATE_STRING = '2025-05-12T23:59:59Z'; // 12일 마지막 순간까지 (UTC)
+// 특별 과제 기간 정의 (KST 기준)
+const SPECIAL_MISSION_START_DATE_STRING = '2025-05-10T00:00:00+09:00';
+const SPECIAL_MISSION_END_DATE_STRING = '2025-05-12T23:59:59+09:00'; // 12일 마지막 순간까지 (KST)
 
 function isValidDate(dateString) {
     if (!dateString) return false;
