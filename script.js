@@ -1,23 +1,19 @@
-document.addEventListener('DOMContentLoaded', async function() { // !!!! async 추가 !!!!
-
+// Firebase SDK는 전역 객체로 사용
+document.addEventListener('DOMContentLoaded', async function() {
     // Firebase 설정값을 환경 변수에서 가져오기
     const firebaseConfig = {
-        apiKey: process.env.FIREBASE_API_KEY,
-        authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-        appId: process.env.FIREBASE_APP_ID
+        apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+        authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+        projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+        storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+        appId: import.meta.env.VITE_FIREBASE_APP_ID
     };
 
     // Firebase 초기화
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
-        console.log("Firebase 앱 초기화 성공");
-    } else {
-        firebase.app();
     }
-
     const db = firebase.firestore();
     const auth = firebase.auth();
 
@@ -119,7 +115,7 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
         timeRemainingDisplay.textContent = `(${days}일 ${hours}시간 ${minutes}분 남음)`;
     }
 
-    if (auth) { auth.onAuthStateChanged(function(user) {
+    if (auth) { firebase.auth().onAuthStateChanged(function(user) {
         if (user) {
             if (loginForm) loginForm.style.display = 'none';
             if (userInfoDisplay) userInfoDisplay.style.display = 'block';
@@ -142,7 +138,7 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
                 loginErrorMessage.style.display = 'block'; return;
             }
             loginErrorMessage.style.display = 'none';
-            auth.signInWithEmailAndPassword(email, password)
+            firebase.auth().signInWithEmailAndPassword(email, password)
                 .then((userCredential) => { console.log('Login successful:', userCredential.user.email); })
                 .catch((error) => {
                     console.error('Login failed:', error);
@@ -151,7 +147,7 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
                 });
         });
     }
-    if (logoutButton) { logoutButton.addEventListener('click', function() { auth.signOut().catch((error) => { console.error('Logout failed:', error); }); }); }
+    if (logoutButton) { logoutButton.addEventListener('click', function() { firebase.auth().signOut().catch((error) => { console.error('Logout failed:', error); }); }); }
 
     function openModal() { if (addBlogModal) { addBlogModal.style.display = 'flex'; console.log('Add blog modal opened'); } }
     function closeModal() { if (addBlogModal) { addBlogModal.style.display = 'none'; if (addBlogForm) addBlogForm.reset(); console.log('Add blog modal closed');} }
@@ -177,7 +173,7 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
             if (!blogName || !blogUrl || !rssFeedUrl) { alert('모든 필드를 입력해주세요.'); return; }
 
             try {
-                await db.collection('blogs').add({
+                await firebase.firestore().collection('blogs').add({
                     name: blogName, url: blogUrl, rss_feed_url: rssFeedUrl,
                     rank: allFetchedBlogs.length + 1000, isActive: true,
                     challengePosts: 0,
@@ -471,7 +467,7 @@ document.addEventListener('DOMContentLoaded', async function() { // !!!! async �
         if(emptyMessageElement) {emptyMessageElement.style.display = 'block'; const p=emptyMessageElement.querySelector('p'); if(p)p.textContent='블로그 데이터를 불러오는 중...';} // 기존 이름 사용
         updateSummary('?', '?', '?');
         try {
-            const snapshot = await db.collection('blogs').orderBy('rank', 'asc').get();
+            const snapshot = await firebase.firestore().collection('blogs').orderBy('rank', 'asc').get();
             allFetchedBlogs = [];
             if (snapshot.empty) { console.log('No blogs in Firestore.'); }
             else { snapshot.forEach(doc => { allFetchedBlogs.push({ id: doc.id, ...doc.data() }); }); }
