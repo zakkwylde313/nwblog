@@ -20,7 +20,7 @@ try {
     console.error('Firebase Admin SDK 초기화 실패:', e.message);
 }
 
-const CHALLENGE_EPOCH_START_DATE_STRING = '2025-05-25T00:00:00+09:00'; // 챌린지 대주기 시작일 (KST)
+const CHALLENGE_EPOCH_START_DATE_STRING = '2025-05-10T00:00:00+09:00'; // 챌린지 대주기 시작일 (KST)
 const CHALLENGE_PERIOD_MS = 14 * 24 * 60 * 60 * 1000; // 2주를 밀리초로
 
 // 특별 과제 기간 정의 (KST 기준)
