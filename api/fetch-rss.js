@@ -157,20 +157,32 @@ module.exports = async (req, res) => {
                             }
 
                             if (postDateObj >= epochStartDate) {
+                                if (isBupyeongCampus) {
+                                    console.log(`[${blogName}] 포스팅 처리: ${postDateObj.toISOString()}, foundFirstPost: ${foundFirstPost}, foundSecondPost: ${foundSecondPost}`);
+                                }
                                 if (!foundFirstPost) {
                                     foundFirstPost = true;
+                                    if (isBupyeongCampus) {
+                                        console.log(`[${blogName}] 첫 번째 포스팅 건너뜀: ${postDateObj.toISOString()}`);
+                                    }
                                 } else if (isBupyeongCampus && !foundSecondPost) {
-                                    // 부천범박 캠퍼스의 경우 두 번째 포스팅도 건너뜀
                                     foundSecondPost = true;
+                                    console.log(`[${blogName}] 두 번째 포스팅 건너뜀: ${postDateObj.toISOString()}`);
                                 } else {
                                     calculatedGeneralChallengePosts++;
                                     postsForGeneralChallenge.push(postDateObj);
+                                    if (isBupyeongCampus) {
+                                        console.log(`[${blogName}] 챌린지 포스팅으로 카운트: ${postDateObj.toISOString()}`);
+                                    }
                                 }
                             }
                         }
                     });
 
                     finalChallengePosts = calculatedGeneralChallengePosts;
+                    if (isBupyeongCampus) {
+                        console.log(`[${blogName}] 최종 챌린지 포스팅 수: ${finalChallengePosts}`);
+                    }
 
                     writeOperations.lastPostDate = latestPostDateObjInFeed ? latestPostDateObjInFeed.toISOString() : (blogData.lastPostDate || "");
                     writeOperations.posts = feed.items.slice(0, 5).map(item => ({
