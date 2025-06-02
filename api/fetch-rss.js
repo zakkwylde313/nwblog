@@ -151,11 +151,17 @@ module.exports = async (req, res) => {
                     const postsForGeneralChallenge = [];
                     const isBupyeongCampus = blogName.includes('부천범박');
                     let foundFirstPost = false; // 첫 번째 포스팅 체크용 변수
-                    let foundSecondPost = false; // 두 번째 포스팅 체크용 변수 추가
+                    let foundSecondPost = false; // 두 번째 포스팅 체크용 변수
 
                     // --- 챌린지 첫 기간(2025-05-10 ~ 2025-05-25)인지 판단 ---
                     const epochStartDate = new Date(CHALLENGE_EPOCH_START_DATE_STRING); // 2025-05-10
                     const firstPeriodEnd = new Date(epochStartDate.getTime() + CHALLENGE_PERIOD_MS - 1); // 2025-05-25 23:59:59
+
+                    // 현재 챌린지 기간 계산
+                    const now = new Date();
+                    const currentPeriodStart = new Date(epochStartDate.getTime() + Math.floor((now.getTime() - epochStartDate.getTime()) / CHALLENGE_PERIOD_MS) * CHALLENGE_PERIOD_MS);
+                    const currentPeriodEnd = new Date(currentPeriodStart.getTime() + CHALLENGE_PERIOD_MS - 1);
+                    let hasPostInCurrentPeriod = false;
 
                     sortedItems.forEach(item => {
                         const postDateISO = item.isoDate || item.pubDate;
@@ -164,6 +170,11 @@ module.exports = async (req, res) => {
 
                         if (!latestPostDateObjInFeed || postDateObj > latestPostDateObjInFeed) {
                             latestPostDateObjInFeed = postDateObj;
+                        }
+
+                        // 현재 챌린지 기간에 포스팅이 있는지 체크
+                        if (postDateObj >= currentPeriodStart && postDateObj <= currentPeriodEnd) {
+                            hasPostInCurrentPeriod = true;
                         }
 
                         // 챌린지 기준일 이후의 포스팅만 처리
@@ -208,7 +219,7 @@ module.exports = async (req, res) => {
                         snippet: item.contentSnippet ? item.contentSnippet.slice(0, 150) + '...' : ''
                     }));
                     writeOperations.challengePosts = finalChallengePosts;
-                    writeOperations.specialMissionCompleted = finalSpecialMissionCompleted; // 특별 과제 완료 상태 유지
+                    writeOperations.specialMissionCompleted = finalSpecialMissionCompleted;
                     writeOperations.rssFetchError = null;
                     writeOperations.lastRssFetchSuccessAt = admin.firestore.FieldValue.serverTimestamp();
 
@@ -238,15 +249,8 @@ module.exports = async (req, res) => {
                     finalSuccessCount = successCount;
                     finalFailureCount = failureCount;
 
-                    // --- 현재 2주차 일반 챌린지 성공 여부 (isActive) 판정 ---
-                    const currentPeriodSlotStart = new Date(epochStartDate.getTime() + Math.floor((now.getTime() - epochStartDate.getTime()) / CHALLENGE_PERIOD_MS) * CHALLENGE_PERIOD_MS);
-                    let currentPeriodHasGeneralPost = false;
-                    for (const postDate of postsForGeneralChallenge) {
-                        if (postDate >= currentPeriodSlotStart && postDate <= now) {
-                            currentPeriodHasGeneralPost = true; break;
-                        }
-                    }
-                    finalIsActive = currentPeriodHasGeneralPost;
+                    // --- 현재 챌린지 기간 성공 여부 (isActive) 판정 ---
+                    finalIsActive = hasPostInCurrentPeriod;
                     writeOperations.isActive = finalIsActive;
 
                     if (!blogData.lastProcessedPeriodEndDate &&
