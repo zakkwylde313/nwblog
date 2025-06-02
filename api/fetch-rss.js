@@ -196,6 +196,7 @@ module.exports = async (req, res) => {
                     }
 
                     let hasPostInCurrentPeriod = false;
+                    let firstPostFound = false; // 첫 번째 포스팅 체크용 변수
                     console.log(`[${blogName}] RSS 피드 아이템 수: ${feed.items ? feed.items.length : 0}`);
                     
                     sortedItems.forEach((item, index) => {
@@ -219,25 +220,24 @@ module.exports = async (req, res) => {
 
                         // 챌린지 기준일 이후의 포스팅만 처리 (KST 기준)
                         if (postDateObj >= epochStartDate) {
-                            // 첫 번째 챌린지 기간인 경우 첫 번째 포스팅 건너뛰기
-                            if (currentPeriodIndex === 0) {
-                                if (!foundFirstPost) {
-                                    foundFirstPost = true;
-                                    console.log(`[${blogName}] (첫기수) 첫 번째 포스팅 건너뜀: ${postDateObj.toISOString()}`);
-                                } else if (isBupyeongCampus && !foundSecondPost) {
-                                    foundSecondPost = true;
-                                    console.log(`[${blogName}] (첫기수) 두 번째 포스팅 건너뜀: ${postDateObj.toISOString()}`);
-                                } else {
-                                    calculatedGeneralChallengePosts++;
-                                    postsForGeneralChallenge.push(postDateObj);
-                                    console.log(`[${blogName}] (첫기수) 챌린지 포스팅으로 카운트: ${postDateObj.toISOString()}`);
-                                }
-                            } else {
-                                // 첫 번째 기간 이후에는 모든 포스팅 카운트
-                                calculatedGeneralChallengePosts++;
-                                postsForGeneralChallenge.push(postDateObj);
-                                console.log(`[${blogName}] (첫기수 이후) 챌린지 포스팅으로 카운트: ${postDateObj.toISOString()}`);
+                            // 첫 번째 챌린지 기간의 첫 포스팅은 건너뛰기
+                            if (currentPeriodIndex === 0 && !firstPostFound) {
+                                firstPostFound = true;
+                                console.log(`[${blogName}] (첫기수) 첫 번째 포스팅 건너뜀: ${postDateObj.toISOString()}`);
+                                return; // 다음 포스팅으로 넘어감
                             }
+
+                            // 부천범박 캠퍼스이고 첫 번째 기간의 두 번째 포스팅인 경우 건너뛰기
+                            if (currentPeriodIndex === 0 && isBupyeongCampus && !foundSecondPost) {
+                                foundSecondPost = true;
+                                console.log(`[${blogName}] (첫기수) 두 번째 포스팅 건너뜀: ${postDateObj.toISOString()}`);
+                                return; // 다음 포스팅으로 넘어감
+                            }
+
+                            // 그 외의 모든 포스팅은 카운트
+                            calculatedGeneralChallengePosts++;
+                            postsForGeneralChallenge.push(postDateObj);
+                            console.log(`[${blogName}] 챌린지 포스팅으로 카운트: ${postDateObj.toISOString()}`);
                         }
                     });
 
