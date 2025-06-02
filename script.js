@@ -265,15 +265,36 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    if (testUpdateRssButton) { testUpdateRssButton.addEventListener('click', function() {
-        const TEST_BLOG_DOC_ID = "CCwkT8xc1zbTZdTrg1g6"; // 실제 ID로 변경 필요
-        const PLACEHOLDER_ID_TEXT = "여기에_테스트할_블로그_문서ID_넣기";
-        if (TEST_BLOG_DOC_ID === PLACEHOLDER_ID_TEXT || !TEST_BLOG_DOC_ID || TEST_BLOG_DOC_ID.trim() === "") {
-             alert("TEST_BLOG_DOC_ID 변수 확인 필요"); return;
-        }
-        fetchAndUpdateSingleBlogRss(TEST_BLOG_DOC_ID);
-    }); }
-    else { console.warn("testUpdateRssButton not found."); }
+    if (testUpdateRssButton) {
+        testUpdateRssButton.addEventListener('click', async function() {
+            try {
+                console.log('RSS 업데이트 시작...');
+                const response = await fetch('/api/fetch-rss');
+                console.log('API 응답 받음:', response);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API 응답 오류:', errorText);
+                    throw new Error(`API 응답 오류 (${response.status}): ${errorText}`);
+                }
+                
+                const data = await response.json();
+                console.log('API 응답 데이터:', data);
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                alert(`RSS 업데이트 완료!\n성공: ${data.updatedCount}\n실패: ${data.errorCount}`);
+                loadBlogsAndDisplay();
+            } catch (error) {
+                console.error('RSS 업데이트 중 오류 발생:', error);
+                alert(`RSS 업데이트 실패: ${error.message}`);
+            }
+        });
+    } else {
+        console.warn("testUpdateRssButton not found.");
+    }
 
     // --- !!!! 블로그 목록 및 대시보드 표시 함수 (기존 displayBlogList 수정) !!!! ---
     function displayBlogList(blogsToDisplay) {

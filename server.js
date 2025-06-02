@@ -1,9 +1,10 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const fetchRss = require('./api/fetch-rss');
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
@@ -16,7 +17,7 @@ app.use((req, res, next) => {
 });
 
 // API 라우트
-app.get('/fetch-rss', async (req, res) => {
+app.get('/api/fetch-rss', async (req, res) => {
     console.log('RSS 업데이트 요청 받음');
     try {
         await fetchRss(req, res);
