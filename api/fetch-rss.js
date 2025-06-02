@@ -168,16 +168,17 @@ module.exports = async (req, res) => {
                     // 현재 챌린지 기간 계산 (KST 기준)
                     const now = utcToKST(new Date());
                     const firstPeriodEnd = new Date(epochStartDate.getTime() + CHALLENGE_PERIOD_MS - 1); // 2025-05-24 23:59:59 KST
+                    const secondPeriodStart = new Date(firstPeriodEnd.getTime() + 1); // 2025-05-25 00:00:00 KST
                     
                     // 현재가 첫 번째 기간인지 두 번째 기간인지 확인
                     let currentPeriodStart, currentPeriodEnd;
-                    if (now <= firstPeriodEnd) {
+                    if (now < secondPeriodStart) {
                         // 첫 번째 기간 (5/10 ~ 5/24)
                         currentPeriodStart = epochStartDate;
                         currentPeriodEnd = firstPeriodEnd;
                     } else {
                         // 두 번째 기간 (5/25 ~ 6/8)
-                        currentPeriodStart = new Date(firstPeriodEnd.getTime() + 1);
+                        currentPeriodStart = secondPeriodStart;
                         currentPeriodEnd = new Date(currentPeriodStart.getTime() + CHALLENGE_PERIOD_MS - 1);
                     }
 
