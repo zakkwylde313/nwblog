@@ -194,13 +194,20 @@ module.exports = async (req, res) => {
                         lastPostDateKST = utcToKST(new Date(blogData.lastPostDate));
                         console.log(`[${blogName}] Firestore lastPostDate (UTC): ${blogData.lastPostDate}`);
                         console.log(`[${blogName}] Firestore lastPostDate (KST): ${lastPostDateKST.toISOString()}`);
+                        console.log(`[${blogName}] 마지막 포스팅이 현재 챌린지 기간 내에 있는지: ${lastPostDateKST >= currentPeriodStart && lastPostDateKST <= currentPeriodEnd}`);
                     }
 
                     let hasPostInCurrentPeriod = false;
-                    sortedItems.forEach(item => {
+                    console.log(`[${blogName}] RSS 피드 아이템 수: ${feed.items ? feed.items.length : 0}`);
+                    
+                    sortedItems.forEach((item, index) => {
                         const postDateISO = item.isoDate || item.pubDate;
-                        if (!isValidDate(postDateISO)) return;
+                        if (!isValidDate(postDateISO)) {
+                            console.log(`[${blogName}] 유효하지 않은 날짜 발견 (${index}번째 아이템): ${postDateISO}`);
+                            return;
+                        }
                         const postDateObj = utcToKST(new Date(postDateISO)); // UTC를 KST로 변환
+                        console.log(`[${blogName}] ${index}번째 포스팅 날짜 (KST): ${postDateObj.toISOString()}`);
 
                         if (!latestPostDateObjInFeed || postDateObj > latestPostDateObjInFeed) {
                             latestPostDateObjInFeed = postDateObj;
@@ -289,6 +296,7 @@ module.exports = async (req, res) => {
                     finalIsActive = isCurrentPeriod && hasPostInCurrentPeriod;
                     writeOperations.isActive = finalIsActive;
                     console.log(`[${blogName}] 현재 기간 포스팅 여부: ${hasPostInCurrentPeriod}, 현재가 챌린지 기간인지: ${isCurrentPeriod}, isActive: ${finalIsActive}`);
+                    console.log(`[${blogName}] 최종 결정된 isActive: ${finalIsActive}`);
 
                     if (!blogData.lastProcessedPeriodEndDate &&
                         finalIsActive &&
