@@ -165,17 +165,24 @@ module.exports = async (req, res) => {
                     let foundFirstPost = false; // 첫 번째 포스팅 체크용 변수
                     let foundSecondPost = false; // 두 번째 포스팅 체크용 변수
 
-                    // --- 챌린지 첫 기간(2025-05-10 ~ 2025-05-25)인지 판단 ---
-                    const epochStartDate = new Date(CHALLENGE_EPOCH_START_DATE_STRING); // 2025-05-10 KST
-                    const firstPeriodEnd = new Date(epochStartDate.getTime() + CHALLENGE_PERIOD_MS - 1); // 2025-05-25 23:59:59 KST
-
                     // 현재 챌린지 기간 계산 (KST 기준)
                     const now = utcToKST(new Date());
-                    const currentPeriodStart = new Date(epochStartDate.getTime() + Math.floor((now.getTime() - epochStartDate.getTime()) / CHALLENGE_PERIOD_MS) * CHALLENGE_PERIOD_MS);
-                    const currentPeriodEnd = new Date(currentPeriodStart.getTime() + CHALLENGE_PERIOD_MS - 1);
-                    let hasPostInCurrentPeriod = false;
+                    const firstPeriodEnd = new Date(epochStartDate.getTime() + CHALLENGE_PERIOD_MS - 1); // 2025-05-24 23:59:59 KST
+                    
+                    // 현재가 첫 번째 기간인지 두 번째 기간인지 확인
+                    let currentPeriodStart, currentPeriodEnd;
+                    if (now <= firstPeriodEnd) {
+                        // 첫 번째 기간 (5/10 ~ 5/24)
+                        currentPeriodStart = epochStartDate;
+                        currentPeriodEnd = firstPeriodEnd;
+                    } else {
+                        // 두 번째 기간 (5/25 ~ 6/8)
+                        currentPeriodStart = new Date(firstPeriodEnd.getTime() + 1);
+                        currentPeriodEnd = new Date(currentPeriodStart.getTime() + CHALLENGE_PERIOD_MS - 1);
+                    }
 
                     console.log(`[${blogName}] 현재 챌린지 기간: ${currentPeriodStart.toISOString()} ~ ${currentPeriodEnd.toISOString()}`);
+                    console.log(`[${blogName}] 현재 시간 (KST): ${now.toISOString()}`);
 
                     // 현재 챌린지 기간이 맞는지 확인
                     const isCurrentPeriod = now >= currentPeriodStart && now <= currentPeriodEnd;
@@ -187,6 +194,7 @@ module.exports = async (req, res) => {
                         lastPostDateKST = utcToKST(new Date(blogData.lastPostDate));
                         console.log(`[${blogName}] Firestore lastPostDate (UTC): ${blogData.lastPostDate}`);
                         console.log(`[${blogName}] Firestore lastPostDate (KST): ${lastPostDateKST.toISOString()}`);
+                        console.log(`[${blogName}] 마지막 포스팅이 현재 챌린지 기간 내에 있는지: ${lastPostDateKST >= currentPeriodStart && lastPostDateKST <= currentPeriodEnd}`);
                     }
 
                     sortedItems.forEach(item => {
@@ -200,7 +208,6 @@ module.exports = async (req, res) => {
 
                         // 현재 챌린지 기간에 포스팅이 있는지 체크
                         if (postDateObj >= currentPeriodStart && postDateObj <= currentPeriodEnd) {
-                            hasPostInCurrentPeriod = true;
                             console.log(`[${blogName}] 현재 기간 포스팅 발견: ${postDateObj.toISOString()}`);
                         }
 
@@ -278,9 +285,9 @@ module.exports = async (req, res) => {
 
                     // --- 현재 챌린지 기간 성공 여부 (isActive) 판정 ---
                     // 현재가 챌린지 기간이고, 해당 기간에 포스팅이 있는 경우에만 true
-                    finalIsActive = isCurrentPeriod && hasPostInCurrentPeriod;
+                    finalIsActive = isCurrentPeriod && (now >= currentPeriodStart && now <= currentPeriodEnd);
                     writeOperations.isActive = finalIsActive;
-                    console.log(`[${blogName}] 현재 기간 포스팅 여부: ${hasPostInCurrentPeriod}, 현재가 챌린지 기간인지: ${isCurrentPeriod}, isActive: ${finalIsActive}`);
+                    console.log(`[${blogName}] 현재 기간 포스팅 여부: ${finalIsActive}, 현재가 챌린지 기간인지: ${isCurrentPeriod}`);
 
                     if (!blogData.lastProcessedPeriodEndDate &&
                         finalIsActive &&
