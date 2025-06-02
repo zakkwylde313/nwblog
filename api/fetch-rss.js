@@ -141,6 +141,11 @@ module.exports = async (req, res) => {
                     writeOperations.isActive = finalIsActive;
                     writeOperations.lastRssFetchAttemptAt = admin.firestore.FieldValue.serverTimestamp();
                 } else {
+                    const sortedItems = feed.items.sort((a, b) => {
+                        const dateA = new Date(a.isoDate || a.pubDate);
+                        const dateB = new Date(b.isoDate || b.pubDate);
+                        return dateB - dateA;
+                    });
                    let calculatedGeneralChallengePosts = 0;
 let latestPostDateObjInFeed = null;
 const postsForGeneralChallenge = [];
