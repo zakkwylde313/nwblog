@@ -146,53 +146,55 @@ module.exports = async (req, res) => {
                         const dateB = new Date(b.isoDate || b.pubDate);
                         return dateB - dateA;
                     });
-                   let calculatedGeneralChallengePosts = 0;
-let latestPostDateObjInFeed = null;
-const postsForGeneralChallenge = [];
-const isBupyeongCampus = blogName.includes('부천범박');
+                    let calculatedGeneralChallengePosts = 0;
+                    let latestPostDateObjInFeed = null;
+                    const postsForGeneralChallenge = [];
+                    const isBupyeongCampus = blogName.includes('부천범박');
+                    let foundFirstPost = false; // 첫 번째 포스팅 체크용 변수
+                    let foundSecondPost = false; // 두 번째 포스팅 체크용 변수 추가
 
-// --- 챌린지 첫 기간(2025-05-10 ~ 2025-05-25)인지 판단 ---
-const epochStartDate = new Date(CHALLENGE_EPOCH_START_DATE_STRING); // 2025-05-10
-const firstPeriodEnd = new Date(epochStartDate.getTime() + CHALLENGE_PERIOD_MS - 1); // 2025-05-25 23:59:59
+                    // --- 챌린지 첫 기간(2025-05-10 ~ 2025-05-25)인지 판단 ---
+                    const epochStartDate = new Date(CHALLENGE_EPOCH_START_DATE_STRING); // 2025-05-10
+                    const firstPeriodEnd = new Date(epochStartDate.getTime() + CHALLENGE_PERIOD_MS - 1); // 2025-05-25 23:59:59
 
-sortedItems.forEach(item => {
-    const postDateISO = item.isoDate || item.pubDate;
-    if (!isValidDate(postDateISO)) return;
-    const postDateObj = new Date(postDateISO);
+                    sortedItems.forEach(item => {
+                        const postDateISO = item.isoDate || item.pubDate;
+                        if (!isValidDate(postDateISO)) return;
+                        const postDateObj = new Date(postDateISO);
 
-    if (!latestPostDateObjInFeed || postDateObj > latestPostDateObjInFeed) {
-        latestPostDateObjInFeed = postDateObj;
-    }
+                        if (!latestPostDateObjInFeed || postDateObj > latestPostDateObjInFeed) {
+                            latestPostDateObjInFeed = postDateObj;
+                        }
 
-    // 챌린지 기준일 이후의 포스팅만 처리
-    if (postDateObj >= epochStartDate) {
-        // 부천범박 캠퍼스이고, 현재 포스팅 날짜가 첫 기간(5/10~5/25) 안에 있을 때
-        const isInFirstPeriod = isBupyeongCampus && (postDateObj >= epochStartDate && postDateObj <= firstPeriodEnd);
+                        // 챌린지 기준일 이후의 포스팅만 처리
+                        if (postDateObj >= epochStartDate) {
+                            // 부천범박 캠퍼스이고, 현재 포스팅 날짜가 첫 기간(5/10~5/25) 안에 있을 때
+                            const isInFirstPeriod = isBupyeongCampus && (postDateObj >= epochStartDate && postDateObj <= firstPeriodEnd);
 
-        if (isInFirstPeriod) {
-            // --- 첫 기간(5/10~5/25): 기존 첫/두 번째 스킵 로직 유지 ---
-            if (!foundFirstPost) {
-                foundFirstPost = true;
-                console.log(`[${blogName}] (첫기수) 첫 번째 포스팅 건너뜀: ${postDateObj.toISOString()}`);
-            } else if (isBupyeongCampus && !foundSecondPost) {
-                foundSecondPost = true;
-                console.log(`[${blogName}] (첫기수) 두 번째 포스팅 건너뜀: ${postDateObj.toISOString()}`);
-            } else {
-                // 첫 두 개를 건너뛰고, 세 번째부터 카운트
-                calculatedGeneralChallengePosts++;
-                postsForGeneralChallenge.push(postDateObj);
-                console.log(`[${blogName}] (첫기수) 챌린지 포스팅으로 카운트: ${postDateObj.toISOString()}`);
-            }
-        } else {
-            // --- 두 번째 챌린지 기간 이후(또는 일반 캠퍼스) 로직: 첫 포스팅부터 바로 카운트 ---
-            calculatedGeneralChallengePosts++;
-            postsForGeneralChallenge.push(postDateObj);
-            if (isBupyeongCampus) {
-                console.log(`[${blogName}] (첫기수 이후) 챌린지 포스팅으로 카운트: ${postDateObj.toISOString()}`);
-            }
-        }
-    }
-});
+                            if (isInFirstPeriod) {
+                                // --- 첫 기간(5/10~5/25): 첫/두 번째 포스팅 건너뛰기 ---
+                                if (!foundFirstPost) {
+                                    foundFirstPost = true;
+                                    console.log(`[${blogName}] (첫기수) 첫 번째 포스팅 건너뜀: ${postDateObj.toISOString()}`);
+                                } else if (isBupyeongCampus && !foundSecondPost) {
+                                    foundSecondPost = true;
+                                    console.log(`[${blogName}] (첫기수) 두 번째 포스팅 건너뜀: ${postDateObj.toISOString()}`);
+                                } else {
+                                    // 첫 두 개를 건너뛰고, 세 번째부터 카운트
+                                    calculatedGeneralChallengePosts++;
+                                    postsForGeneralChallenge.push(postDateObj);
+                                    console.log(`[${blogName}] (첫기수) 챌린지 포스팅으로 카운트: ${postDateObj.toISOString()}`);
+                                }
+                            } else {
+                                // --- 두 번째 챌린지 기간 이후(또는 일반 캠퍼스) 로직: 첫 포스팅부터 바로 카운트 ---
+                                calculatedGeneralChallengePosts++;
+                                postsForGeneralChallenge.push(postDateObj);
+                                if (isBupyeongCampus) {
+                                    console.log(`[${blogName}] (첫기수 이후) 챌린지 포스팅으로 카운트: ${postDateObj.toISOString()}`);
+                                }
+                            }
+                        }
+                    });
 
                     finalChallengePosts = calculatedGeneralChallengePosts;
                     if (isBupyeongCampus) {
