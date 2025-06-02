@@ -41,6 +41,11 @@ function isValidDate(dateString) {
     return !isNaN(date.getTime());
 }
 
+// 한국 시간으로 변환하는 함수 추가
+function toKST(date) {
+    return new Date(date.getTime() + (9 * 60 * 60 * 1000));
+}
+
 module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -154,11 +159,11 @@ module.exports = async (req, res) => {
                     let foundSecondPost = false; // 두 번째 포스팅 체크용 변수
 
                     // --- 챌린지 첫 기간(2025-05-10 ~ 2025-05-25)인지 판단 ---
-                    const epochStartDate = new Date(CHALLENGE_EPOCH_START_DATE_STRING); // 2025-05-10
-                    const firstPeriodEnd = new Date(epochStartDate.getTime() + CHALLENGE_PERIOD_MS - 1); // 2025-05-25 23:59:59
+                    const epochStartDate = new Date(CHALLENGE_EPOCH_START_DATE_STRING); // 2025-05-10 KST
+                    const firstPeriodEnd = new Date(epochStartDate.getTime() + CHALLENGE_PERIOD_MS - 1); // 2025-05-25 23:59:59 KST
 
-                    // 현재 챌린지 기간 계산
-                    const now = new Date();
+                    // 현재 챌린지 기간 계산 (KST 기준)
+                    const now = toKST(new Date());
                     const currentPeriodStart = new Date(epochStartDate.getTime() + Math.floor((now.getTime() - epochStartDate.getTime()) / CHALLENGE_PERIOD_MS) * CHALLENGE_PERIOD_MS);
                     const currentPeriodEnd = new Date(currentPeriodStart.getTime() + CHALLENGE_PERIOD_MS - 1);
                     let hasPostInCurrentPeriod = false;
@@ -166,7 +171,7 @@ module.exports = async (req, res) => {
                     sortedItems.forEach(item => {
                         const postDateISO = item.isoDate || item.pubDate;
                         if (!isValidDate(postDateISO)) return;
-                        const postDateObj = new Date(postDateISO);
+                        const postDateObj = toKST(new Date(postDateISO)); // KST로 변환
 
                         if (!latestPostDateObjInFeed || postDateObj > latestPostDateObjInFeed) {
                             latestPostDateObjInFeed = postDateObj;
@@ -177,7 +182,7 @@ module.exports = async (req, res) => {
                             hasPostInCurrentPeriod = true;
                         }
 
-                        // 챌린지 기준일 이후의 포스팅만 처리
+                        // 챌린지 기준일 이후의 포스팅만 처리 (KST 기준)
                         if (postDateObj >= epochStartDate) {
                             // 부천범박 캠퍼스이고, 현재 포스팅 날짜가 첫 기간(5/10~5/25) 안에 있을 때
                             const isInFirstPeriod = isBupyeongCampus && (postDateObj >= epochStartDate && postDateObj <= firstPeriodEnd);
