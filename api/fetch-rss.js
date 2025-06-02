@@ -175,6 +175,8 @@ module.exports = async (req, res) => {
                     const currentPeriodEnd = new Date(currentPeriodStart.getTime() + CHALLENGE_PERIOD_MS - 1);
                     let hasPostInCurrentPeriod = false;
 
+                    console.log(`[${blogName}] 현재 챌린지 기간: ${currentPeriodStart.toISOString()} ~ ${currentPeriodEnd.toISOString()}`);
+
                     sortedItems.forEach(item => {
                         const postDateISO = item.isoDate || item.pubDate;
                         if (!isValidDate(postDateISO)) return;
@@ -187,6 +189,7 @@ module.exports = async (req, res) => {
                         // 현재 챌린지 기간에 포스팅이 있는지 체크
                         if (postDateObj >= currentPeriodStart && postDateObj <= currentPeriodEnd) {
                             hasPostInCurrentPeriod = true;
+                            console.log(`[${blogName}] 현재 기간 포스팅 발견: ${postDateObj.toISOString()}`);
                         }
 
                         // 챌린지 기준일 이후의 포스팅만 처리 (KST 기준)
@@ -264,6 +267,7 @@ module.exports = async (req, res) => {
                     // --- 현재 챌린지 기간 성공 여부 (isActive) 판정 ---
                     finalIsActive = hasPostInCurrentPeriod;
                     writeOperations.isActive = finalIsActive;
+                    console.log(`[${blogName}] 현재 기간 포스팅 여부: ${hasPostInCurrentPeriod}, isActive: ${finalIsActive}`);
 
                     if (!blogData.lastProcessedPeriodEndDate &&
                         finalIsActive &&
