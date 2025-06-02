@@ -192,7 +192,7 @@ module.exports = async (req, res) => {
                         // 챌린지 기준일 이후의 포스팅만 처리 (KST 기준)
                         if (postDateObj >= epochStartDate) {
                             // 부천범박 캠퍼스이고, 현재 포스팅 날짜가 첫 기간(5/10~5/25) 안에 있을 때
-                            const isInFirstPeriod = isBupyeongCampus && (postDateObj >= epochStartDate && postDateObj <= firstPeriodEnd);
+                            const isInFirstPeriod = postDateObj >= epochStartDate && postDateObj <= firstPeriodEnd;
 
                             if (isInFirstPeriod) {
                                 // --- 첫 기간(5/10~5/25): 첫/두 번째 포스팅 건너뛰기 ---
@@ -209,12 +209,10 @@ module.exports = async (req, res) => {
                                     console.log(`[${blogName}] (첫기수) 챌린지 포스팅으로 카운트: ${postDateObj.toISOString()}`);
                                 }
                             } else {
-                                // --- 두 번째 챌린지 기간 이후(또는 일반 캠퍼스) 로직: 첫 포스팅부터 바로 카운트 ---
+                                // --- 두 번째 챌린지 기간 이후 로직: 첫 포스팅부터 바로 카운트 ---
                                 calculatedGeneralChallengePosts++;
                                 postsForGeneralChallenge.push(postDateObj);
-                                if (isBupyeongCampus) {
-                                    console.log(`[${blogName}] (첫기수 이후) 챌린지 포스팅으로 카운트: ${postDateObj.toISOString()}`);
-                                }
+                                console.log(`[${blogName}] (첫기수 이후) 챌린지 포스팅으로 카운트: ${postDateObj.toISOString()}`);
                             }
                         }
                     });
