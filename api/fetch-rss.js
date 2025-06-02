@@ -164,7 +164,8 @@ module.exports = async (req, res) => {
                     let latestPostDateObjInFeed = null;
                     const postsForGeneralChallenge = [];
                     const isBupyeongCampus = blogName.includes('부천범박');
-                    let foundSecondPost = false; // 두 번째 포스팅 체크용 변수 (부천범박용)
+                    let hasPostInCurrentPeriod = false;
+                    console.log(`[${blogName}] RSS 피드 아이템 수: ${feed.items ? feed.items.length : 0}`);
 
                     // 현재 챌린지 기간 계산 (KST 기준)
                     const now = utcToKST(new Date());
@@ -196,23 +197,9 @@ module.exports = async (req, res) => {
                         console.log(`[${blogName}] 마지막 포스팅이 현재 챌린지 기간 내에 있는지: ${lastPostDateKST >= currentPeriodStart && lastPostDateKST <= currentPeriodEnd}`);
                     }
 
-                    let hasPostInCurrentPeriod = false;
-                    console.log(`[${blogName}] RSS 피드 아이템 수: ${feed.items ? feed.items.length : 0}`);
-
-                    // 첫 번째 챌린지 기간의 첫 포스팅을 찾기 위한 변수
-                    let firstPeriodFirstPost = null;
-                    let firstPostSkipped = false; // 첫 포스팅 건너뛰기 여부 체크
-                    if (currentPeriodIndex === 0) {
-                        // 첫 번째 챌린지 기간의 첫 포스팅 찾기
-                        for (const item of sortedItems) {
-                            const postDate = utcToKST(new Date(item.isoDate || item.pubDate));
-                            if (postDate >= epochStartDate && postDate <= currentPeriodEnd) {
-                                firstPeriodFirstPost = postDate;
-                                break;
-                            }
-                        }
-                        console.log(`[${blogName}] 첫 번째 챌린지 기간의 첫 포스팅: ${firstPeriodFirstPost ? firstPeriodFirstPost.toISOString() : '없음'}`);
-                    }
+                    // 첫 포스팅 체크용 변수들
+                    let firstPostFound = false; // 첫 포스팅 발견 여부
+                    let secondPostFound = false; // 두 번째 포스팅 발견 여부 (부천범박용)
                     
                     sortedItems.forEach((item, index) => {
                         const postDateISO = item.isoDate || item.pubDate;
@@ -235,18 +222,17 @@ module.exports = async (req, res) => {
 
                         // 챌린지 기준일 이후의 포스팅만 처리 (KST 기준)
                         if (postDateObj >= epochStartDate) {
-                            // 첫 번째 챌린지 기간의 첫 포스팅은 건너뛰기
-                            if (currentPeriodIndex === 0 && !firstPostSkipped && firstPeriodFirstPost && 
-                                Math.abs(postDateObj.getTime() - firstPeriodFirstPost.getTime()) < 1000) { // 1초 이내의 차이는 같은 포스팅으로 간주
-                                firstPostSkipped = true;
-                                console.log(`[${blogName}] (첫기수) 첫 번째 포스팅 건너뜀: ${postDateObj.toISOString()}`);
+                            // 첫 번째 포스팅은 건너뛰기
+                            if (!firstPostFound) {
+                                firstPostFound = true;
+                                console.log(`[${blogName}] 첫 번째 포스팅 건너뜀: ${postDateObj.toISOString()}`);
                                 return; // 다음 포스팅으로 넘어감
                             }
 
-                            // 부천범박 캠퍼스이고 첫 번째 기간의 두 번째 포스팅인 경우 건너뛰기
-                            if (currentPeriodIndex === 0 && isBupyeongCampus && !foundSecondPost) {
-                                foundSecondPost = true;
-                                console.log(`[${blogName}] (첫기수) 두 번째 포스팅 건너뜀: ${postDateObj.toISOString()}`);
+                            // 부천범박 캠퍼스이고 두 번째 포스팅인 경우 건너뛰기
+                            if (isBupyeongCampus && !secondPostFound) {
+                                secondPostFound = true;
+                                console.log(`[${blogName}] 두 번째 포스팅 건너뜀: ${postDateObj.toISOString()}`);
                                 return; // 다음 포스팅으로 넘어감
                             }
 
