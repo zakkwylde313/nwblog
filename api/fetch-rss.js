@@ -181,6 +181,14 @@ module.exports = async (req, res) => {
                     const isCurrentPeriod = now >= currentPeriodStart && now <= currentPeriodEnd;
                     console.log(`[${blogName}] 현재가 챌린지 기간인지: ${isCurrentPeriod}`);
 
+                    // Firestore의 lastPostDate를 KST로 변환
+                    let lastPostDateKST = null;
+                    if (blogData.lastPostDate) {
+                        lastPostDateKST = utcToKST(new Date(blogData.lastPostDate));
+                        console.log(`[${blogName}] Firestore lastPostDate (UTC): ${blogData.lastPostDate}`);
+                        console.log(`[${blogName}] Firestore lastPostDate (KST): ${lastPostDateKST.toISOString()}`);
+                    }
+
                     sortedItems.forEach(item => {
                         const postDateISO = item.isoDate || item.pubDate;
                         if (!isValidDate(postDateISO)) return;
