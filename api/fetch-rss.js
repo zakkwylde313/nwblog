@@ -177,6 +177,10 @@ module.exports = async (req, res) => {
 
                     console.log(`[${blogName}] 현재 챌린지 기간: ${currentPeriodStart.toISOString()} ~ ${currentPeriodEnd.toISOString()}`);
 
+                    // 현재 챌린지 기간이 맞는지 확인
+                    const isCurrentPeriod = now >= currentPeriodStart && now <= currentPeriodEnd;
+                    console.log(`[${blogName}] 현재가 챌린지 기간인지: ${isCurrentPeriod}`);
+
                     sortedItems.forEach(item => {
                         const postDateISO = item.isoDate || item.pubDate;
                         if (!isValidDate(postDateISO)) return;
@@ -265,9 +269,10 @@ module.exports = async (req, res) => {
                     finalFailureCount = failureCount;
 
                     // --- 현재 챌린지 기간 성공 여부 (isActive) 판정 ---
-                    finalIsActive = hasPostInCurrentPeriod;
+                    // 현재가 챌린지 기간이고, 해당 기간에 포스팅이 있는 경우에만 true
+                    finalIsActive = isCurrentPeriod && hasPostInCurrentPeriod;
                     writeOperations.isActive = finalIsActive;
-                    console.log(`[${blogName}] 현재 기간 포스팅 여부: ${hasPostInCurrentPeriod}, isActive: ${finalIsActive}`);
+                    console.log(`[${blogName}] 현재 기간 포스팅 여부: ${hasPostInCurrentPeriod}, 현재가 챌린지 기간인지: ${isCurrentPeriod}, isActive: ${finalIsActive}`);
 
                     if (!blogData.lastProcessedPeriodEndDate &&
                         finalIsActive &&
