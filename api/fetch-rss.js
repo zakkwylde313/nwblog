@@ -41,9 +41,16 @@ function isValidDate(dateString) {
     return !isNaN(date.getTime());
 }
 
-// 한국 시간으로 변환하는 함수 추가
-function toKST(date) {
+// UTC를 KST로 변환하는 함수
+function utcToKST(utcDate) {
+    const date = new Date(utcDate);
     return new Date(date.getTime() + (9 * 60 * 60 * 1000));
+}
+
+// KST를 UTC로 변환하는 함수
+function kstToUTC(kstDate) {
+    const date = new Date(kstDate);
+    return new Date(date.getTime() - (9 * 60 * 60 * 1000));
 }
 
 module.exports = async (req, res) => {
@@ -163,7 +170,7 @@ module.exports = async (req, res) => {
                     const firstPeriodEnd = new Date(epochStartDate.getTime() + CHALLENGE_PERIOD_MS - 1); // 2025-05-25 23:59:59 KST
 
                     // 현재 챌린지 기간 계산 (KST 기준)
-                    const now = toKST(new Date());
+                    const now = utcToKST(new Date());
                     const currentPeriodStart = new Date(epochStartDate.getTime() + Math.floor((now.getTime() - epochStartDate.getTime()) / CHALLENGE_PERIOD_MS) * CHALLENGE_PERIOD_MS);
                     const currentPeriodEnd = new Date(currentPeriodStart.getTime() + CHALLENGE_PERIOD_MS - 1);
                     let hasPostInCurrentPeriod = false;
@@ -171,7 +178,7 @@ module.exports = async (req, res) => {
                     sortedItems.forEach(item => {
                         const postDateISO = item.isoDate || item.pubDate;
                         if (!isValidDate(postDateISO)) return;
-                        const postDateObj = toKST(new Date(postDateISO)); // KST로 변환
+                        const postDateObj = utcToKST(new Date(postDateISO)); // UTC를 KST로 변환
 
                         if (!latestPostDateObjInFeed || postDateObj > latestPostDateObjInFeed) {
                             latestPostDateObjInFeed = postDateObj;
@@ -217,9 +224,11 @@ module.exports = async (req, res) => {
                         console.log(`[${blogName}] 최종 챌린지 포스팅 수: ${finalChallengePosts}`);
                     }
 
-                    writeOperations.lastPostDate = latestPostDateObjInFeed ? latestPostDateObjInFeed.toISOString() : (blogData.lastPostDate || "");
+                    // KST로 변환된 날짜를 UTC로 변환하여 저장
+                    writeOperations.lastPostDate = latestPostDateObjInFeed ? kstToUTC(latestPostDateObjInFeed).toISOString() : (blogData.lastPostDate || "");
                     writeOperations.posts = feed.items.slice(0, 5).map(item => ({
-                        title: item.title || "제목 없음", link: item.link || "#",
+                        title: item.title || "제목 없음", 
+                        link: item.link || "#",
                         date: item.isoDate || item.pubDate || "",
                         snippet: item.contentSnippet ? item.contentSnippet.slice(0, 150) + '...' : ''
                     }));
