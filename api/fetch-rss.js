@@ -167,25 +167,22 @@ module.exports = async (req, res) => {
 
                     // 현재 챌린지 기간 계산 (KST 기준)
                     const now = utcToKST(new Date());
-                    const firstPeriodEnd = new Date(epochStartDate.getTime() + CHALLENGE_PERIOD_MS - 1); // 2025-05-24 23:59:59 KST
-                    const secondPeriodStart = new Date(firstPeriodEnd.getTime() + 1); // 2025-05-25 00:00:00 KST
+                    const epochStartDate = new Date(CHALLENGE_EPOCH_START_DATE_STRING); // 2025-05-10 00:00:00 KST
                     
-                    // 현재가 첫 번째 기간인지 두 번째 기간인지 확인
-                    let currentPeriodStart, currentPeriodEnd;
-                    if (now < secondPeriodStart) {
-                        // 첫 번째 기간 (5/10 ~ 5/24)
-                        currentPeriodStart = epochStartDate;
-                        currentPeriodEnd = firstPeriodEnd;
-                    } else {
-                        // 두 번째 기간 (5/25 ~ 6/8)
-                        currentPeriodStart = secondPeriodStart;
-                        currentPeriodEnd = new Date(currentPeriodStart.getTime() + CHALLENGE_PERIOD_MS - 1);
-                    }
+                    // 현재가 몇 번째 챌린지 기간인지 계산 (KST 기준)
+                    const timeSinceEpoch = now.getTime() - epochStartDate.getTime();
+                    const currentPeriodIndex = Math.floor(timeSinceEpoch / CHALLENGE_PERIOD_MS);
+                    
+                    // 현재 챌린지 기간의 시작일과 종료일 계산 (KST 기준)
+                    const currentPeriodStart = new Date(epochStartDate.getTime() + (currentPeriodIndex * CHALLENGE_PERIOD_MS));
+                    const currentPeriodEnd = new Date(currentPeriodStart.getTime() + CHALLENGE_PERIOD_MS - 1);
 
-                    console.log(`[${blogName}] 현재 챌린지 기간: ${currentPeriodStart.toISOString()} ~ ${currentPeriodEnd.toISOString()}`);
+                    // 로그에 KST 명시
+                    console.log(`[${blogName}] 현재 챌린지 기간 (KST): ${currentPeriodStart.toISOString()} ~ ${currentPeriodEnd.toISOString()}`);
                     console.log(`[${blogName}] 현재 시간 (KST): ${now.toISOString()}`);
+                    console.log(`[${blogName}] 현재 챌린지 기간: ${currentPeriodIndex + 1}번째 기간`);
 
-                    // 현재 챌린지 기간이 맞는지 확인
+                    // 현재 챌린지 기간이 맞는지 확인 (KST 기준)
                     const isCurrentPeriod = now >= currentPeriodStart && now <= currentPeriodEnd;
                     console.log(`[${blogName}] 현재가 챌린지 기간인지: ${isCurrentPeriod}`);
 
@@ -214,7 +211,7 @@ module.exports = async (req, res) => {
                             latestPostDateObjInFeed = postDateObj;
                         }
 
-                        // 현재 챌린지 기간에 포스팅이 있는지 체크
+                        // 현재 챌린지 기간에 포스팅이 있는지 체크 (KST 기준)
                         if (postDateObj >= currentPeriodStart && postDateObj <= currentPeriodEnd) {
                             hasPostInCurrentPeriod = true;
                             console.log(`[${blogName}] 현재 기간 포스팅 발견: ${postDateObj.toISOString()}`);
@@ -222,11 +219,8 @@ module.exports = async (req, res) => {
 
                         // 챌린지 기준일 이후의 포스팅만 처리 (KST 기준)
                         if (postDateObj >= epochStartDate) {
-                            // 부천범박 캠퍼스이고, 현재 포스팅 날짜가 첫 기간(5/10~5/25) 안에 있을 때
-                            const isInFirstPeriod = postDateObj >= epochStartDate && postDateObj <= firstPeriodEnd;
-
-                            if (isInFirstPeriod) {
-                                // --- 첫 기간(5/10~5/25): 첫/두 번째 포스팅 건너뛰기 ---
+                            // 첫 번째 챌린지 기간인 경우 첫 번째 포스팅 건너뛰기
+                            if (currentPeriodIndex === 0) {
                                 if (!foundFirstPost) {
                                     foundFirstPost = true;
                                     console.log(`[${blogName}] (첫기수) 첫 번째 포스팅 건너뜀: ${postDateObj.toISOString()}`);
@@ -234,13 +228,12 @@ module.exports = async (req, res) => {
                                     foundSecondPost = true;
                                     console.log(`[${blogName}] (첫기수) 두 번째 포스팅 건너뜀: ${postDateObj.toISOString()}`);
                                 } else {
-                                    // 첫 두 개를 건너뛰고, 세 번째부터 카운트
                                     calculatedGeneralChallengePosts++;
                                     postsForGeneralChallenge.push(postDateObj);
                                     console.log(`[${blogName}] (첫기수) 챌린지 포스팅으로 카운트: ${postDateObj.toISOString()}`);
                                 }
                             } else {
-                                // --- 두 번째 챌린지 기간 이후 로직: 첫 포스팅부터 바로 카운트 ---
+                                // 첫 번째 기간 이후에는 모든 포스팅 카운트
                                 calculatedGeneralChallengePosts++;
                                 postsForGeneralChallenge.push(postDateObj);
                                 console.log(`[${blogName}] (첫기수 이후) 챌린지 포스팅으로 카운트: ${postDateObj.toISOString()}`);
