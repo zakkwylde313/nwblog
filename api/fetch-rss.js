@@ -53,6 +53,26 @@ function kstToUTC(kstDate) {
     return new Date(date.getTime() - (9 * 60 * 60 * 1000));
 }
 
+// 현재 챌린지 기간의 시작일과 종료일을 계산하는 함수
+function calculateCurrentChallengePeriod() {
+    const now = utcToKST(new Date());
+    const epochStartDate = new Date(CHALLENGE_EPOCH_START_DATE_STRING);
+    
+    // 현재가 몇 번째 챌린지 기간인지 계산 (KST 기준)
+    const timeSinceEpoch = now.getTime() - epochStartDate.getTime();
+    const currentPeriodIndex = Math.floor(timeSinceEpoch / CHALLENGE_PERIOD_MS);
+    
+    // 현재 챌린지 기간의 시작일과 종료일 계산 (KST 기준)
+    const currentPeriodStart = new Date(epochStartDate.getTime() + (currentPeriodIndex * CHALLENGE_PERIOD_MS));
+    const currentPeriodEnd = new Date(currentPeriodStart.getTime() + CHALLENGE_PERIOD_MS - 1);
+    
+    return {
+        currentPeriodStart,
+        currentPeriodEnd,
+        isCurrentPeriod: now >= currentPeriodStart && now <= currentPeriodEnd
+    };
+}
+
 module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -168,24 +188,12 @@ module.exports = async (req, res) => {
                     console.log(`[${blogName}] RSS 피드 아이템 수: ${feed.items ? feed.items.length : 0}`);
 
                     // 현재 챌린지 기간 계산 (KST 기준)
+                    const { currentPeriodStart, currentPeriodEnd, isCurrentPeriod } = calculateCurrentChallengePeriod();
                     const now = utcToKST(new Date());
-                    const epochStartDate = new Date(CHALLENGE_EPOCH_START_DATE_STRING); // 2025-05-10 00:00:00 KST
-                    
-                    // 현재가 몇 번째 챌린지 기간인지 계산 (KST 기준)
-                    const timeSinceEpoch = now.getTime() - epochStartDate.getTime();
-                    const currentPeriodIndex = Math.floor(timeSinceEpoch / CHALLENGE_PERIOD_MS);
-                    
-                    // 현재 챌린지 기간의 시작일과 종료일 계산 (KST 기준)
-                    const currentPeriodStart = new Date(epochStartDate.getTime() + (currentPeriodIndex * CHALLENGE_PERIOD_MS));
-                    const currentPeriodEnd = new Date(currentPeriodStart.getTime() + CHALLENGE_PERIOD_MS - 1);
 
                     // 로그에 KST 명시
                     console.log(`[${blogName}] 현재 챌린지 기간 (KST): ${currentPeriodStart.toISOString()} ~ ${currentPeriodEnd.toISOString()}`);
                     console.log(`[${blogName}] 현재 시간 (KST): ${now.toISOString()}`);
-                    console.log(`[${blogName}] 현재 챌린지 기간: ${currentPeriodIndex + 1}번째 기간`);
-
-                    // 현재 챌린지 기간이 맞는지 확인 (KST 기준)
-                    const isCurrentPeriod = now >= currentPeriodStart && now <= currentPeriodEnd;
                     console.log(`[${blogName}] 현재가 챌린지 기간인지: ${isCurrentPeriod}`);
 
                     // Firestore의 lastPostDate를 KST로 변환
