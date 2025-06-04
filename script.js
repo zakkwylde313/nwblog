@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     const CHALLENGE_EPOCH_START_DATE_STRING = '2025-05-10T00:00:00+09:00';
     const CHALLENGE_PERIOD_WEEKS = 2;
-    const CHALLENGE_START_DATE_FOR_COUNTING_POSTS_UTC = new Date('2025-05-25T00:00:00+09:00');
+    const CHALLENGE_PERIOD_MS = CHALLENGE_PERIOD_WEEKS * 7 * 24 * 60 * 60 * 1000;
 
 
     function formatKoreanDate(dateString, includeTime = false) {
@@ -107,16 +107,22 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function getCurrentChallengeDeadline() {
-        const currentChallengeStart = new Date('2025-05-25T00:00:00+09:00');
-        const periodMs = CHALLENGE_PERIOD_WEEKS * 7 * 24 * 60 * 60 * 1000;
+        const epochStartDate = new Date(CHALLENGE_EPOCH_START_DATE_STRING);
         const now = new Date();
-
-        if (now < currentChallengeStart) {
-            // 현재 챌린지 시작 전이면 첫 마감일 반환
-            return new Date(currentChallengeStart.getTime() + periodMs);
-        }
-        // 현재 챌린지의 마감일
-        return new Date(currentChallengeStart.getTime() + periodMs);
+        
+        // 현재가 몇 번째 챌린지 기간인지 계산
+        const timeSinceEpoch = now.getTime() - epochStartDate.getTime();
+        const currentPeriodIndex = Math.floor(timeSinceEpoch / CHALLENGE_PERIOD_MS);
+        
+        // 현재 챌린지 기간의 시작일과 종료일 계산
+        const currentPeriodStart = new Date(epochStartDate.getTime() + (currentPeriodIndex * CHALLENGE_PERIOD_MS));
+        const currentPeriodEnd = new Date(currentPeriodStart.getTime() + CHALLENGE_PERIOD_MS - 1);
+        
+        // KST 기준으로 시간을 00:00:00으로 설정
+        currentPeriodStart.setHours(0, 0, 0, 0);
+        currentPeriodEnd.setHours(23, 59, 59, 999);
+        
+        return currentPeriodEnd;
     }
 
     function updateChallengeCountdown() {
