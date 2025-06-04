@@ -63,12 +63,10 @@ function calculateCurrentChallengePeriod() {
     const currentPeriodIndex = Math.floor(timeSinceEpoch / CHALLENGE_PERIOD_MS);
     
     // 현재 챌린지 기간의 시작일과 종료일 계산 (KST 기준)
-    // 시작일: epochStartDate + (currentPeriodIndex * CHALLENGE_PERIOD_MS)
-    // 종료일: 시작일 + CHALLENGE_PERIOD_MS - 1
     const currentPeriodStart = new Date(epochStartDate.getTime() + (currentPeriodIndex * CHALLENGE_PERIOD_MS));
     const currentPeriodEnd = new Date(currentPeriodStart.getTime() + CHALLENGE_PERIOD_MS - 1);
     
-    // KST 기준으로 시간을 00:00:00으로 설정
+    // KST 기준으로 시간을 정확하게 설정
     currentPeriodStart.setHours(0, 0, 0, 0);
     currentPeriodEnd.setHours(23, 59, 59, 999);
     
