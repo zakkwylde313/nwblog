@@ -209,7 +209,21 @@ module.exports = async (req, res) => {
                     let firstPostFound = false; // 첫 포스팅 발견 여부
                     let secondPostFound = false; // 두 번째 포스팅 발견 여부 (부천범박용)
                     
-                    sortedItems.forEach((item, index) => {
+                    // 챌린지 시작일 이후의 포스팅만 필터링
+                    const challengeStartDate = new Date(CHALLENGE_EPOCH_START_DATE_STRING);
+                    const challengePosts = sortedItems.filter(item => {
+                        const postDate = utcToKST(new Date(item.isoDate || item.pubDate));
+                        return postDate >= challengeStartDate;
+                    });
+
+                    // 필터링된 포스팅들을 날짜순으로 정렬 (오래된 순)
+                    challengePosts.sort((a, b) => {
+                        const dateA = new Date(a.isoDate || a.pubDate);
+                        const dateB = new Date(b.isoDate || b.pubDate);
+                        return dateA - dateB;
+                    });
+
+                    challengePosts.forEach((item, index) => {
                         const postDateISO = item.isoDate || item.pubDate;
                         if (!isValidDate(postDateISO)) {
                             console.log(`[${blogName}] 유효하지 않은 날짜 발견 (${index}번째 아이템): ${postDateISO}`);
@@ -228,27 +242,24 @@ module.exports = async (req, res) => {
                             console.log(`[${blogName}] 현재 기간 포스팅 발견: ${postDateObj.toISOString()}`);
                         }
 
-                        // 챌린지 기준일 이후의 포스팅만 처리 (KST 기준)
-                        if (postDateObj >= epochStartDate) {
-                            // 첫 번째 포스팅은 건너뛰기
-                            if (!firstPostFound) {
-                                firstPostFound = true;
-                                console.log(`[${blogName}] 첫 번째 포스팅 건너뜀: ${postDateObj.toISOString()}`);
-                                return; // 다음 포스팅으로 넘어감
-                            }
-
-                            // 부천범박 캠퍼스이고 두 번째 포스팅인 경우 건너뛰기
-                            if (isBupyeongCampus && !secondPostFound) {
-                                secondPostFound = true;
-                                console.log(`[${blogName}] 두 번째 포스팅 건너뜀: ${postDateObj.toISOString()}`);
-                                return; // 다음 포스팅으로 넘어감
-                            }
-
-                            // 그 외의 모든 포스팅은 카운트
-                            calculatedGeneralChallengePosts++;
-                            postsForGeneralChallenge.push(postDateObj);
-                            console.log(`[${blogName}] 챌린지 포스팅으로 카운트: ${postDateObj.toISOString()}`);
+                        // 첫 번째 포스팅은 건너뛰기
+                        if (!firstPostFound) {
+                            firstPostFound = true;
+                            console.log(`[${blogName}] 첫 번째 포스팅 건너뜀: ${postDateObj.toISOString()}`);
+                            return; // 다음 포스팅으로 넘어감
                         }
+
+                        // 부천범박 캠퍼스이고 두 번째 포스팅인 경우 건너뛰기
+                        if (isBupyeongCampus && !secondPostFound) {
+                            secondPostFound = true;
+                            console.log(`[${blogName}] 두 번째 포스팅 건너뜀: ${postDateObj.toISOString()}`);
+                            return; // 다음 포스팅으로 넘어감
+                        }
+
+                        // 그 외의 모든 포스팅은 카운트
+                        calculatedGeneralChallengePosts++;
+                        postsForGeneralChallenge.push(postDateObj);
+                        console.log(`[${blogName}] 챌린지 포스팅으로 카운트: ${postDateObj.toISOString()}`);
                     });
 
                     finalChallengePosts = calculatedGeneralChallengePosts;
