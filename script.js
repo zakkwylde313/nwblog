@@ -92,18 +92,27 @@ document.addEventListener('DOMContentLoaded', async function() {
         try {
             const date = new Date(dateString);
             if (isNaN(date.getTime())) {
-                // console.warn("formatKoreanDate: Invalid date from string:", dateString);
                 return '날짜 형식 오류';
             }
-            const year = date.getFullYear();
-            const month = date.getMonth() + 1;
-            const day = date.getDate();
+            
+            // UTC를 KST로 변환 (표시용)
+            const kstDate = new Date(date.getTime() + (9 * 60 * 60 * 1000));
+            
+            const year = kstDate.getFullYear();
+            const month = kstDate.getMonth() + 1;
+            const day = kstDate.getDate();
+            
             if (includeTime) {
-                const hours = date.getHours();
-                const minutes = date.getMinutes();
+                const hours = kstDate.getHours();
+                const minutes = kstDate.getMinutes();
                 return `${year}년 ${month}월 ${day}일 ${String(hours).padStart(2, '0')}시 ${String(minutes).padStart(2, '0')}분`;
-            } else { return `${year}년 ${month}월 ${day}일`; }
-        } catch (e) { console.warn("날짜 포맷 변경 중 오류:", dateString, e); return '날짜 변환 오류'; }
+            } else {
+                return `${year}년 ${month}월 ${day}일`;
+            }
+        } catch (e) {
+            console.warn("날짜 포맷 변경 중 오류:", dateString, e);
+            return '날짜 변환 오류';
+        }
     }
 
     function getCurrentChallengeDeadline() {
@@ -116,7 +125,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // 현재 챌린지 기간의 시작일과 종료일 계산
         const currentPeriodStart = new Date(epochStartDate.getTime() + (currentPeriodIndex * CHALLENGE_PERIOD_MS));
-        const currentPeriodEnd = new Date(currentPeriodStart.getTime() + CHALLENGE_PERIOD_MS - 1);
+        const currentPeriodEnd = new Date(currentPeriodStart.getTime() + CHALLENGE_PERIOD_MS);
         
         // KST 기준으로 시간을 정확하게 설정
         currentPeriodStart.setHours(0, 0, 0, 0);
