@@ -241,8 +241,8 @@ module.exports = async (req, res) => {
                     // 챌린지 시작일 이후의 포스팅만 필터링
                     const challengeStartDate = new Date(CHALLENGE_EPOCH_START_DATE_STRING);
                     const challengePosts = sortedItems.filter(item => {
-                        const postDate = utcToKST(new Date(item.isoDate || item.pubDate));
-                        return postDate >= challengeStartDate;
+                        const postDateUtc = new Date(item.isoDate || item.pubDate);
+                        return postDateUtc >= challengeStartDate;
                     });
 
                     // 필터링된 포스팅들을 날짜순으로 정렬 (오래된 순)
@@ -259,36 +259,29 @@ module.exports = async (req, res) => {
                             return;
                         }
                         const postDateUtc = new Date(postDateISO); // RSS 피드의 날짜는 보통 UTC이거나, new Date()가 UTC로 잘 파싱합니다.
-                    
-                        // 로그 출력 시 KST로 변환하고 싶다면 별도 처리 (원본 postDateUtc는 변경하지 않음)
-                        // const postDateKSTForLog = new Date(postDateUtc.getTime() + (9 * 60 * 60 * 1000));
-                        // console.log(`[${blogName}] ${index}번째 포스팅 날짜 (UTC): ${postDateUtc.toISOString()}, (KST approximations): ${postDateKSTForLog.toISOString().replace('T', ' ').substring(0,19)}`);
                         console.log(`[${blogName}] ${index}번째 포스팅 날짜 (UTC): ${postDateUtc.toISOString()}`);
                     
-                    
                         if (!latestPostDateObjInFeed || postDateUtc > latestPostDateObjInFeed) {
-                            latestPostDateObjInFeed = postDateUtc; // UTC로 저장
+                            latestPostDateObjInFeed = postDateUtc;
                         }
                     
                         // 현재 챌린지 기간에 포스팅이 있는지 체크 (모두 UTC로 비교)
-                        // currentPeriodStart와 currentPeriodEnd는 calculateCurrentChallengePeriod에서 반환된 UTC 값입니다.
                         if (postDateUtc >= currentPeriodStart && postDateUtc <= currentPeriodEnd) {
                             hasPostInCurrentPeriod = true;
                             console.log(`[${blogName}] 현재 기간 포스팅 발견 (UTC): ${postDateUtc.toISOString()}`);
                         }
                     
-
                         // 첫 번째 포스팅은 건너뛰기
                         if (!firstPostFound) {
                             firstPostFound = true;
-                            console.log(`[${blogName}] 첫 번째 포스팅 건너뜀: ${postDateObj.toISOString()}`);
+                            console.log(`[${blogName}] 첫 번째 포스팅 건너뜀: ${postDateUtc.toISOString()}`);
                             return; // 다음 포스팅으로 넘어감
                         }
 
                         // 부천범박 캠퍼스이고 두 번째 포스팅인 경우 건너뛰기
                         if (isBupyeongCampus && !secondPostFound) {
                             secondPostFound = true;
-                            console.log(`[${blogName}] 두 번째 포스팅 건너뜀: ${postDateObj.toISOString()}`);
+                            console.log(`[${blogName}] 두 번째 포스팅 건너뜀: ${postDateUtc.toISOString()}`);
                             return; // 다음 포스팅으로 넘어감
                         }
 
