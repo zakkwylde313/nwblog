@@ -44,18 +44,22 @@ function isValidDate(dateString) {
 // UTC를 KST로 변환하는 함수
 function utcToKST(utcDate) {
     const date = new Date(utcDate);
-    return new Date(date.getTime() + (9 * 60 * 60 * 1000));
+    // KST는 UTC+9이므로 9시간을 더함
+    date.setHours(date.getHours() + 9);
+    return date;
 }
 
 // KST를 UTC로 변환하는 함수
 function kstToUTC(kstDate) {
     const date = new Date(kstDate);
-    return new Date(date.getTime() - (9 * 60 * 60 * 1000));
+    // KST는 UTC+9이므로 9시간을 뺌
+    date.setHours(date.getHours() - 9);
+    return date;
 }
 
 // 현재 챌린지 기간의 시작일과 종료일을 계산하는 함수
 function calculateCurrentChallengePeriod() {
-    const now = utcToKST(new Date());
+    const now = new Date();
     const epochStartDate = new Date(CHALLENGE_EPOCH_START_DATE_STRING);
     
     // 현재가 몇 번째 챌린지 기간인지 계산 (KST 기준)
