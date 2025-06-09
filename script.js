@@ -403,23 +403,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             const rssIconTextForDetail = blog.rssRegistered ? 'RSS 등록됨' : 'RSS 미등록';
             let recentPostsHTML = '<div class="blog-item-recent-posts"><strong>최신 포스팅</strong><ul>';
             if (blog.posts && blog.posts.length > 0) {
-                // 최신 포스팅 3개 표시
-                const recentPosts = blog.posts.slice(0, 3);
-                recentPosts.forEach(item => {
-                    const postDate = new Date(item.date || item.pubDate);
-                    // UTC를 KST로 변환 (표시용)
-                    const kstDate = new Date(postDate.getTime() + (9 * 60 * 60 * 1000));
-                    const formattedDate = kstDate.toLocaleString('ko-KR', { 
-                        year: 'numeric', 
-                        month: '2-digit', 
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: false
-                    });
-                    const isVisited = visitedLinks[item.link] || false;
+                blog.posts.slice(0, 3).forEach(post => {
+                    const postTitle = post.title || '제목 없음';
+                    const postLink = post.link || '#';
+                    const formattedDate = formatKoreanDate(post.date, true);
+                    const isVisited = visitedLinks[postLink];
                     const linkClass = isVisited ? 'visited-link' : '';
-                    recentPostsHTML += `<li><a href="${item.link}" target="_blank" rel="noopener noreferrer" class="${linkClass}" data-link="${item.link}">${item.title || '제목 없음'}</a> <span class="post-date">${formattedDate}</span></li>`;
+                    recentPostsHTML += `<li><a href="${postLink}" target="_blank" rel="noopener noreferrer" class="${linkClass}" data-link="${postLink}">${postTitle}</a> <span class="post-date">${formattedDate}</span></li>`;
                 });
             } else { recentPostsHTML += '<li>최신 포스팅 정보가 없습니다.</li>'; }
             recentPostsHTML += '</ul></div>';
