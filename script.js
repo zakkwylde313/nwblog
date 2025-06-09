@@ -87,23 +87,32 @@ document.addEventListener('DOMContentLoaded', async function() {
     const CHALLENGE_PERIOD_MS = CHALLENGE_PERIOD_WEEKS * 7 * 24 * 60 * 60 * 1000;
 
 
+    /**
+     * 날짜 문자열을 한국 시간(KST)으로 포맷팅합니다.
+     * 수동으로 9시간을 더하는 중복 로직을 제거하여 시간 왜곡 문제를 해결했습니다.
+     * @param {string} dateString - 날짜를 나타내는 문자열 (ISO 8601 형식 권장)
+     * @param {boolean} includeTime - 시간에 시간 정보 포함 여부
+     * @returns {string} - "YYYY년 M월 D일 (HH시 mm분)" 형식의 문자열
+     */
     function formatKoreanDate(dateString, includeTime = false) {
         if (!dateString) return '정보 없음';
         try {
-            const utcDate = new Date(dateString);
-            if (isNaN(utcDate.getTime())) {
+            // dateString으로 Date 객체 생성.
+            // new Date()는 ISO 8601 형식의 문자열을 올바르게 해석하여 UTC 기준으로 시간을 저장합니다.
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) {
                 return '날짜 형식 오류';
             }
-            // 수동으로 KST로 변환
-            const kstTimestamp = utcDate.getTime() + (9 * 60 * 60 * 1000);
-            const kstDate = new Date(kstTimestamp);
+            
+            // 수동 시간 변환 제거: getFullYear, getHours 등의 메서드는
+            // 브라우저의 로컬 시간대(이 경우 KST)를 기준으로 올바른 값을 반환합니다.
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
 
-            const year = kstDate.getFullYear();
-            const month = kstDate.getMonth() + 1;
-            const day = kstDate.getDate();
             if (includeTime) {
-                const hours = String(kstDate.getHours()).padStart(2, '0');
-                const minutes = String(kstDate.getMinutes()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
                 return `${year}년 ${month}월 ${day}일 ${hours}시 ${minutes}분`;
             } else {
                 return `${year}년 ${month}월 ${day}일`;
@@ -493,7 +502,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (isNaN(dateB.getTime())) return -1;
                 return dateB - dateA; // 내림차순 (최신이 위로)
             });
-            renderDashboardTable(blogsToRender);
+            // renderDashboardTable(blogsToRender); // 이 함수는 없으므로 displayBlogList만 호출합니다.
             displayBlogList(blogsToRender);
             return;
         }
@@ -502,7 +511,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         let filteredAndSortedBlogs = [...allFetchedBlogs];
 
         if (statusFilterValue === 'active') { filteredAndSortedBlogs = filteredAndSortedBlogs.filter(blog => blog.isActive === true); }
-        else if (statusFilterValue === 'inactive') { filteredAndSortedBlogs = filteredAndSortedBlogs.filter(blog => blog.isActive === false); }    
+        else if (statusFilterValue === 'inactive') { filteredAndSortedBlogs = filteredAndSortedBlogs.filter(blog => blog.isActive === false); }     
         if (sortOrderValue === 'post_count_desc') { // "포스팅 많은 순"
             filteredAndSortedBlogs.sort((a, b) => (b.challengePosts || 0) - (a.challengePosts || 0));
         } else if (sortOrderValue === 'recent_post') { // "최근 포스팅 순"
@@ -517,8 +526,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         displayBlogList(filteredAndSortedBlogs); // 기존 displayBlogList 호출 유지
-        // 만약 renderDashboardTable 함수를 별도로 만들었다면 여기서도 호출
-        // renderDashboardTable(filteredAndSortedBlogs);
     }
 
     async function loadBlogsAndDisplay() {
@@ -552,7 +559,19 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    function getFirebaseErrorMessage(error) { /* ... 이전과 동일 ... */ }
+    function getFirebaseErrorMessage(error) { 
+        // 간단한 오류 메시지 반환 로직 (필요시 확장)
+        switch (error.code) {
+            case 'auth/user-not-found':
+                return '등록되지 않은 사용자입니다.';
+            case 'auth/wrong-password':
+                return '비밀번호가 틀렸습니다.';
+            case 'auth/invalid-email':
+                return '유효하지 않은 이메일 주소입니다.';
+            default:
+                return '알 수 없는 오류가 발생했습니다.';
+        }
+    }
 
     if (statusFilterElement) { statusFilterElement.addEventListener('change', applyFiltersAndSort); }
     else { console.warn("statusFilterElement not found."); }
