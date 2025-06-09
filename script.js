@@ -88,8 +88,8 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 
     /**
-     * 날짜 문자열을 한국 시간(KST)으로 포맷팅합니다.
-     * 수동으로 9시간을 더하는 중복 로직을 제거하여 시간 왜곡 문제를 해결했습니다.
+     * 날짜 문자열을 한국 시간(KST)으로 일관되게 포맷팅합니다.
+     * Intl.DateTimeFormat을 사용하여 브라우저 시간대 설정에 관계없이 항상 'Asia/Seoul'을 기준으로 변환합니다.
      * @param {string} dateString - 날짜를 나타내는 문자열 (ISO 8601 형식 권장)
      * @param {boolean} includeTime - 시간에 시간 정보 포함 여부
      * @returns {string} - "YYYY년 M월 D일 (HH시 mm분)" 형식의 문자열
@@ -97,25 +97,44 @@ document.addEventListener('DOMContentLoaded', async function() {
     function formatKoreanDate(dateString, includeTime = false) {
         if (!dateString) return '정보 없음';
         try {
-            // dateString으로 Date 객체 생성.
-            // new Date()는 ISO 8601 형식의 문자열을 올바르게 해석하여 UTC 기준으로 시간을 저장합니다.
             const date = new Date(dateString);
             if (isNaN(date.getTime())) {
                 return '날짜 형식 오류';
             }
-            
-            // 수동 시간 변환 제거: getFullYear, getHours 등의 메서드는
-            // 브라우저의 로컬 시간대(이 경우 KST)를 기준으로 올바른 값을 반환합니다.
-            const year = date.getFullYear();
-            const month = date.getMonth() + 1;
-            const day = date.getDate();
 
             if (includeTime) {
-                const hours = String(date.getHours()).padStart(2, '0');
-                const minutes = String(date.getMinutes()).padStart(2, '0');
-                return `${year}년 ${month}월 ${day}일 ${hours}시 ${minutes}분`;
+                const options = {
+                    timeZone: 'Asia/Seoul',
+                    year: 'numeric',
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                };
+                // "2025. 6. 9. 18:04"와 같은 형식을 반환
+                const formatted = new Intl.DateTimeFormat('ko-KR', options).format(date);
+                // "YYYY년 M월 D일 HH시 mm분" 형식으로 재조립
+                const parts = formatted.match(/\d+/g);
+                if (parts && parts.length >= 5) {
+                    return `${parts[0]}년 ${parts[1]}월 ${parts[2]}일 ${parts[3]}시 ${parts[4]}분`;
+                }
+                return formatted; // 예외 경우, 원본 포맷 반환
             } else {
-                return `${year}년 ${month}월 ${day}일`;
+                const options = {
+                    timeZone: 'Asia/Seoul',
+                    year: 'numeric',
+                    month: 'numeric',
+                    day: 'numeric'
+                };
+                // "2025. 6. 9."와 같은 형식을 반환
+                const formatted = new Intl.DateTimeFormat('ko-KR', options).format(date);
+                // "YYYY년 M월 D일" 형식으로 재조립
+                const parts = formatted.match(/\d+/g);
+                if (parts && parts.length >= 3) {
+                    return `${parts[0]}년 ${parts[1]}월 ${parts[2]}일`;
+                }
+                return formatted; // 예외 경우, 원본 포맷 반환
             }
         } catch (e) {
             console.warn("날짜 포맷 변경 중 오류:", dateString, e);
