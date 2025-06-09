@@ -94,21 +94,20 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (isNaN(date.getTime())) {
                 return '날짜 형식 오류';
             }
-            
-            // UTC를 KST로 변환 (표시용)
-            const kstDate = new Date(date.getTime() + (9 * 60 * 60 * 1000));
-            
-            const year = kstDate.getFullYear();
-            const month = kstDate.getMonth() + 1;
-            const day = kstDate.getDate();
-            
-            if (includeTime) {
-                const hours = kstDate.getHours();
-                const minutes = kstDate.getMinutes();
-                return `${year}년 ${month}월 ${day}일 ${String(hours).padStart(2, '0')}시 ${String(minutes).padStart(2, '0')}분`;
-            } else {
-                return `${year}년 ${month}월 ${day}일`;
+            const options = {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+                timeZone: 'Asia/Seoul'
+            };
+            if (!includeTime) {
+                delete options.hour;
+                delete options.minute;
             }
+            return date.toLocaleString('ko-KR', options).replace('오전', '').replace('오후', '').trim();
         } catch (e) {
             console.warn("날짜 포맷 변경 중 오류:", dateString, e);
             return '날짜 변환 오류';
