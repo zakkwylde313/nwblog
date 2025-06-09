@@ -90,24 +90,24 @@ document.addEventListener('DOMContentLoaded', async function() {
     function formatKoreanDate(dateString, includeTime = false) {
         if (!dateString) return '정보 없음';
         try {
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) {
+            const utcDate = new Date(dateString);
+            if (isNaN(utcDate.getTime())) {
                 return '날짜 형식 오류';
             }
-            const options = {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false,
-                timeZone: 'Asia/Seoul'
-            };
-            if (!includeTime) {
-                delete options.hour;
-                delete options.minute;
+            // 수동으로 KST로 변환
+            const kstTimestamp = utcDate.getTime() + (9 * 60 * 60 * 1000);
+            const kstDate = new Date(kstTimestamp);
+
+            const year = kstDate.getFullYear();
+            const month = kstDate.getMonth() + 1;
+            const day = kstDate.getDate();
+            if (includeTime) {
+                const hours = String(kstDate.getHours()).padStart(2, '0');
+                const minutes = String(kstDate.getMinutes()).padStart(2, '0');
+                return `${year}년 ${month}월 ${day}일 ${hours}시 ${minutes}분`;
+            } else {
+                return `${year}년 ${month}월 ${day}일`;
             }
-            return date.toLocaleString('ko-KR', options).replace('오전', '').replace('오후', '').trim();
         } catch (e) {
             console.warn("날짜 포맷 변경 중 오류:", dateString, e);
             return '날짜 변환 오류';
