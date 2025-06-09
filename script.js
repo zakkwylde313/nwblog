@@ -407,6 +407,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     console.log(`[DEBUG] Firestore post.date 원본:`, post.date);
                     const postTitle = post.title || '제목 없음';
                     const postLink = post.link || '#';
+                    // 오직 formatKoreanDate만 사용하여 날짜 변환
                     const formattedDate = formatKoreanDate(post.date, true);
                     // formatKoreanDate가 호출되는 위치와 결과를 출력
                     console.log(`[DEBUG] formatKoreanDate(${post.date}) =>`, formattedDate);
