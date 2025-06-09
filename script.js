@@ -404,9 +404,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             let recentPostsHTML = '<div class="blog-item-recent-posts"><strong>최신 포스팅</strong><ul>';
             if (blog.posts && blog.posts.length > 0) {
                 blog.posts.slice(0, 3).forEach(post => {
+                    // Firestore에서 받아온 실제 값을 출력
+                    console.log(`[DEBUG] Firestore post.date 원본:`, post.date);
                     const postTitle = post.title || '제목 없음';
                     const postLink = post.link || '#';
                     const formattedDate = formatKoreanDate(post.date, true);
+                    // formatKoreanDate가 호출되는 위치와 결과를 출력
+                    console.log(`[DEBUG] formatKoreanDate(${post.date}) =>`, formattedDate);
                     const isVisited = visitedLinks[postLink];
                     const linkClass = isVisited ? 'visited-link' : '';
                     recentPostsHTML += `<li><a href="${postLink}" target="_blank" rel="noopener noreferrer" class="${linkClass}" data-link="${postLink}">${postTitle}</a> <span class="post-date">${formattedDate}</span></li>`;
