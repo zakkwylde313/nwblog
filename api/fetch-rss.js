@@ -1,5 +1,3 @@
-// api/fetch-rss.js
-
 const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
@@ -44,22 +42,6 @@ function isValidDate(dateString) {
     if (!dateString) return false;
     const date = new Date(dateString);
     return !isNaN(date.getTime());
-}
-
-// UTC를 KST로 변환하는 함수
-function utcToKST(utcDate) {
-    const date = new Date(utcDate);
-    // KST는 UTC+9이므로 9시간을 더함
-    date.setHours(date.getHours() + 9);
-    return date;
-}
-
-// KST를 UTC로 변환하는 함수
-function kstToUTC(kstDate) {
-    const date = new Date(kstDate);
-    // KST는 UTC+9이므로 9시간을 뺌
-    date.setHours(date.getHours() - 9);
-    return date;
 }
 
 // 현재 챌린지 기간의 시작일과 종료일을 계산하는 함수
@@ -116,12 +98,12 @@ module.exports = async (req, res) => {
     const db = admin.firestore();
 
     // URL 파라미터에서 RSS URL 가져오기
-    const rssUrl = req.query.url;
-    if (rssUrl) {
+    const rssUrlParam = req.query.url;
+    if (rssUrlParam) {
         // 단일 블로그 RSS 가져오기
         try {
-            console.log(`단일 블로그 RSS 가져오기 시작: ${rssUrl}`);
-            const feed = await parser.parseURL(rssUrl);
+            console.log(`단일 블로그 RSS 가져오기 시작: ${rssUrlParam}`);
+            const feed = await parser.parseURL(rssUrlParam);
             console.log(`RSS 가져오기 성공: ${feed.title}`);
 
             if (!feed.items || feed.items.length === 0) {
@@ -163,9 +145,6 @@ module.exports = async (req, res) => {
         if (blogsSnapshot.empty) {
             return res.status(200).json({ message: '등록된 블로그 없음', updatedCount: 0, errorCount: 0 });
         }
-
-        const epochStartDate = new Date(CHALLENGE_EPOCH_START_DATE_STRING);
-        const now = new Date();
 
         const blogProcessingPromises = blogsSnapshot.docs.map(async (doc) => {
             const blogData = doc.data();
@@ -216,27 +195,8 @@ module.exports = async (req, res) => {
                     let hasPostInCurrentPeriod = false;
                     console.log(`[${blogName}] RSS 피드 아이템 수: ${feed.items ? feed.items.length : 0}`);
 
-                    // 현재 챌린지 기간 계산 (KST 기준)
+                    // 현재 챌린지 기간 계산 (UTC 기준)
                     const { currentPeriodStart, currentPeriodEnd, isCurrentPeriod } = calculateCurrentChallengePeriod();
-                    const now = utcToKST(new Date());
-
-                    // 로그에 KST 명시
-                    console.log(`[${blogName}] 현재 챌린지 기간 (KST): ${currentPeriodStart.toISOString()} ~ ${currentPeriodEnd.toISOString()}`);
-                    console.log(`[${blogName}] 현재 시간 (KST): ${now.toISOString()}`);
-                    console.log(`[${blogName}] 현재가 챌린지 기간인지: ${isCurrentPeriod}`);
-
-                    // Firestore의 lastPostDate를 KST로 변환
-                    let lastPostDateKST = null;
-                    if (blogData.lastPostDate) {
-                        lastPostDateKST = utcToKST(new Date(blogData.lastPostDate));
-                        console.log(`[${blogName}] Firestore lastPostDate (UTC): ${blogData.lastPostDate}`);
-                        console.log(`[${blogName}] Firestore lastPostDate (KST): ${lastPostDateKST.toISOString()}`);
-                        console.log(`[${blogName}] 마지막 포스팅이 현재 챌린지 기간 내에 있는지: ${lastPostDateKST >= currentPeriodStart && lastPostDateKST <= currentPeriodEnd}`);
-                    }
-
-                    // 첫 포스팅 체크용 변수들
-                    let firstPostFound = false; // 첫 포스팅 발견 여부
-                    let secondPostFound = false; // 두 번째 포스팅 발견 여부 (부천범박용)
                     
                     // 챌린지 시작일 이후의 포스팅만 필터링
                     const challengeStartDate = new Date(CHALLENGE_EPOCH_START_DATE_STRING);
@@ -252,14 +212,16 @@ module.exports = async (req, res) => {
                         return dateA - dateB;
                     });
 
+                    let firstPostFound = false; // 첫 포스팅 발견 여부
+                    let secondPostFound = false; // 두 번째 포스팅 발견 여부 (부천범박용)
+
                     challengePosts.forEach((item, index) => {
                         const postDateISO = item.isoDate || item.pubDate;
                         if (!isValidDate(postDateISO)) {
                             console.log(`[${blogName}] 유효하지 않은 날짜 발견 (${index}번째 아이템): ${postDateISO}`);
                             return;
                         }
-                        const postDateUtc = new Date(postDateISO); // RSS 피드의 날짜는 보통 UTC이거나, new Date()가 UTC로 잘 파싱합니다.
-                        console.log(`[${blogName}] ${index}번째 포스팅 날짜 (UTC): ${postDateUtc.toISOString()}`);
+                        const postDateUtc = new Date(postDateISO);
                     
                         if (!latestPostDateObjInFeed || postDateUtc > latestPostDateObjInFeed) {
                             latestPostDateObjInFeed = postDateUtc;
@@ -268,36 +230,31 @@ module.exports = async (req, res) => {
                         // 현재 챌린지 기간에 포스팅이 있는지 체크 (모두 UTC로 비교)
                         if (postDateUtc >= currentPeriodStart && postDateUtc <= currentPeriodEnd) {
                             hasPostInCurrentPeriod = true;
-                            console.log(`[${blogName}] 현재 기간 포스팅 발견 (UTC): ${postDateUtc.toISOString()}`);
                         }
                     
-                        // 첫 번째 포스팅은 건너뛰기
                         if (!firstPostFound) {
                             firstPostFound = true;
-                            console.log(`[${blogName}] 첫 번째 포스팅 건너뜀: ${postDateUtc.toISOString()}`);
-                            return; // 다음 포스팅으로 넘어감
+                            return; 
                         }
 
-                        // 부천범박 캠퍼스이고 두 번째 포스팅인 경우 건너뛰기
                         if (isBupyeongCampus && !secondPostFound) {
                             secondPostFound = true;
-                            console.log(`[${blogName}] 두 번째 포스팅 건너뜀: ${postDateUtc.toISOString()}`);
-                            return; // 다음 포스팅으로 넘어감
+                            return; 
                         }
 
-                        // 그 외의 모든 포스팅은 카운트
                         calculatedGeneralChallengePosts++;
                         postsForGeneralChallenge.push(postDateUtc);
-                        console.log(`[${blogName}] 챌린지 포스팅으로 카운트: ${postDateUtc.toISOString()}`);
                     });
 
                     finalChallengePosts = calculatedGeneralChallengePosts;
-                    if (isBupyeongCampus) {
-                        console.log(`[${blogName}] 최종 챌린지 포스팅 수: ${finalChallengePosts}`);
-                    }
-
-                    // KST로 변환된 날짜를 UTC로 변환하여 저장
-                    writeOperations.lastPostDate = latestPostDateObjInFeed ? kstToUTC(latestPostDateObjInFeed).toISOString() : (blogData.lastPostDate || "");
+                    
+                    // =================================================================
+                    // !!!! 수정된 부분 !!!!
+                    // Firestore에 저장하는 `lastPostDate`는 UTC 시간 그대로 저장합니다.
+                    // 불필요한 시간 변환 함수(kstToUTC)를 제거했습니다.
+                    // =================================================================
+                    writeOperations.lastPostDate = latestPostDateObjInFeed ? latestPostDateObjInFeed.toISOString() : (blogData.lastPostDate || "");
+                    
                     writeOperations.posts = feed.items.slice(0, 5).map(item => ({
                         title: item.title || "제목 없음", 
                         link: item.link || "#",
@@ -308,112 +265,62 @@ module.exports = async (req, res) => {
                     writeOperations.specialMissionCompleted = finalSpecialMissionCompleted;
                     writeOperations.rssFetchError = null;
                     writeOperations.lastRssFetchSuccessAt = admin.firestore.FieldValue.serverTimestamp();
+                    
+                    let successCount = blogData.challengeSuccessCount || 0;
+                    let failureCount = blogData.challengeFailureCount || 0;
+                    let lastProcessedPeriodEndDateUtc = blogData.lastProcessedPeriodEndDate ? new Date(blogData.lastProcessedPeriodEndDate) : null;
 
-                    // --- 일반 챌린지 기간별 성공/실패 누적 ---
-                   // --- 일반 챌린지 기간별 성공/실패 누적 ---
-let successCount = blogData.challengeSuccessCount || 0;
-let failureCount = blogData.challengeFailureCount || 0;
-let lastProcessedPeriodEndDateUtc = blogData.lastProcessedPeriodEndDate ? new Date(blogData.lastProcessedPeriodEndDate) : null;
+                    const overallChallengeProgramStartUtc = new Date(FIRST_CHALLENGE_START_KST);
+                    const firstChallengeActualEndUtc = new Date(FIRST_CHALLENGE_END_KST);
+                    const regularPeriodsActualStartUtc = new Date(REGULAR_CHALLENGE_EPOCH_START_KST);
+                    const nowForLoop = new Date();
 
-const overallChallengeProgramStartUtc = new Date(FIRST_CHALLENGE_START_KST); // 챌린지 전체 시작일 (1차 시작일)
-const firstChallengeActualEndUtc = new Date(FIRST_CHALLENGE_END_KST);
-const regularPeriodsActualStartUtc = new Date(REGULAR_CHALLENGE_EPOCH_START_KST);
-const nowForLoop = new Date(); // 현재 UTC 시간
+                    let nextPeriodToProcessStartUtc = lastProcessedPeriodEndDateUtc ? new Date(lastProcessedPeriodEndDateUtc.getTime() + 1) : overallChallengeProgramStartUtc;
 
-let nextPeriodToProcessStartUtc;
+                    if (nextPeriodToProcessStartUtc <= firstChallengeActualEndUtc && firstChallengeActualEndUtc < nowForLoop) {
+                        let postedInFirstPeriod = postsForGeneralChallenge.some(postDate => postDate >= overallChallengeProgramStartUtc && postDate <= firstChallengeActualEndUtc);
+                        if (postedInFirstPeriod) successCount++; else failureCount++;
+                        lastProcessedPeriodEndDateUtc = firstChallengeActualEndUtc;
+                        nextPeriodToProcessStartUtc = new Date(lastProcessedPeriodEndDateUtc.getTime() + 1);
+                    }
 
-if (lastProcessedPeriodEndDateUtc) {
-    nextPeriodToProcessStartUtc = new Date(lastProcessedPeriodEndDateUtc.getTime() + 1); // 마지막 처리된 기간의 다음 밀리초부터
-} else {
-    nextPeriodToProcessStartUtc = overallChallengeProgramStartUtc; // 처음 처리하는 경우, 1차 챌린지 시작일부터
-}
+                    if (nextPeriodToProcessStartUtc < regularPeriodsActualStartUtc) {
+                        nextPeriodToProcessStartUtc = regularPeriodsActualStartUtc;
+                    }
 
-// 1. 1차 챌린지 기간 처리 (아직 처리 안 됐고, 이미 종료된 과거 기간이라면)
-if (nextPeriodToProcessStartUtc <= firstChallengeActualEndUtc && firstChallengeActualEndUtc < nowForLoop) {
-    // 1차 기간이 아직 처리되지 않았거나 일부만 처리되었고, 이미 종료된 기간인 경우
-    let postedInFirstPeriod = false;
-    for (const postDate of postsForGeneralChallenge) { // postsForGeneralChallenge는 UTC Date 객체들의 배열
-        if (postDate >= overallChallengeProgramStartUtc && postDate <= firstChallengeActualEndUtc) {
-            postedInFirstPeriod = true;
-            break;
-        }
-    }
-    console.log(`[${blogName}] 1차 기간 (${overallChallengeProgramStartUtc.toISOString()} ~ ${firstChallengeActualEndUtc.toISOString()}) 처리. 포스팅: ${postedInFirstPeriod}`);
-    if (postedInFirstPeriod) successCount++; else failureCount++;
-    
-    lastProcessedPeriodEndDateUtc = firstChallengeActualEndUtc;
-    // Firestore 업데이트는 아래에서 일괄 처리하거나, 여기서 writeOperations에 추가
-    // writeOperations.lastProcessedPeriodEndDate = lastProcessedPeriodEndDateUtc.toISOString(); 
-    
-    nextPeriodToProcessStartUtc = new Date(lastProcessedPeriodEndDateUtc.getTime() + 1); // 다음 처리 시작일 업데이트
-}
+                    let currentRegularPeriodStartUtc = nextPeriodToProcessStartUtc;
+                    while (currentRegularPeriodStartUtc < nowForLoop && currentRegularPeriodStartUtc >= regularPeriodsActualStartUtc) {
+                        const currentRegularPeriodEndUtc = new Date(currentRegularPeriodStartUtc.getTime() + REGULAR_CHALLENGE_PERIOD_MS - 1);
 
+                        if (currentRegularPeriodEndUtc >= nowForLoop) break;
 
-// 2. 2차 챌린지 기간부터의 일반 주기 처리
-// nextPeriodToProcessStartUtc가 regularPeriodsActualStartUtc보다 뒤에 있을 수 있도록 조정
-if (nextPeriodToProcessStartUtc < regularPeriodsActualStartUtc) {
-    nextPeriodToProcessStartUtc = regularPeriodsActualStartUtc;
-}
+                        let postedThisRegularPeriod = postsForGeneralChallenge.some(postDate => postDate >= currentRegularPeriodStartUtc && postDate <= currentRegularPeriodEndUtc);
+                        if (postedThisRegularPeriod) successCount++; else failureCount++;
+                        
+                        lastProcessedPeriodEndDateUtc = currentRegularPeriodEndUtc;
+                        currentRegularPeriodStartUtc = new Date(currentRegularPeriodEndUtc.getTime() + 1);
+                    }
 
-let currentRegularPeriodStartUtc = nextPeriodToProcessStartUtc;
-
-while (currentRegularPeriodStartUtc < nowForLoop && currentRegularPeriodStartUtc >= regularPeriodsActualStartUtc) {
-    const currentRegularPeriodEndUtc = new Date(currentRegularPeriodStartUtc.getTime() + REGULAR_CHALLENGE_PERIOD_MS - 1);
-
-    if (currentRegularPeriodEndUtc >= nowForLoop) { // 현재 진행 중인 기간은 아직 카운트하지 않음
-        console.log(`[${blogName}] 현재 진행중인 일반 기간 (${currentRegularPeriodStartUtc.toISOString()} ~ ${currentRegularPeriodEndUtc.toISOString()})은 카운트 보류.`);
-        break; 
-    }
-
-    let postedThisRegularPeriod = false;
-    for (const postDate of postsForGeneralChallenge) { // UTC Date 객체들의 배열
-        if (postDate >= currentRegularPeriodStartUtc && postDate <= currentRegularPeriodEndUtc) {
-            postedThisRegularPeriod = true;
-            break;
-        }
-    }
-    console.log(`[${blogName}] 일반 기간 (${currentRegularPeriodStartUtc.toISOString()} ~ ${currentRegularPeriodEndUtc.toISOString()}) 처리. 포스팅: ${postedThisRegularPeriod}`);
-    if (postedThisRegularPeriod) successCount++; else failureCount++;
-    
-    lastProcessedPeriodEndDateUtc = currentRegularPeriodEndUtc;
-    // writeOperations.lastProcessedPeriodEndDate = lastProcessedPeriodEndDateUtc.toISOString();
-
-    currentRegularPeriodStartUtc = new Date(currentRegularPeriodEndUtc.getTime() + 1); // 다음 일반 주기의 시작
-}
-
-writeOperations.challengeSuccessCount = successCount;
-writeOperations.challengeFailureCount = failureCount;
-if (lastProcessedPeriodEndDateUtc && (!blogData.lastProcessedPeriodEndDate || new Date(blogData.lastProcessedPeriodEndDate) < lastProcessedPeriodEndDateUtc) ) {
-    // lastProcessedPeriodEndDateUtc가 업데이트된 경우에만 Firestore에 기록
-    writeOperations.lastProcessedPeriodEndDate = lastProcessedPeriodEndDateUtc.toISOString();
-    console.log(`[${blogName}] lastProcessedPeriodEndDate 업데이트: ${writeOperations.lastProcessedPeriodEndDate}`);
-}
+                    writeOperations.challengeSuccessCount = successCount;
+                    writeOperations.challengeFailureCount = failureCount;
+                    if (lastProcessedPeriodEndDateUtc && (!blogData.lastProcessedPeriodEndDate || new Date(blogData.lastProcessedPeriodEndDate) < lastProcessedPeriodEndDateUtc) ) {
+                        writeOperations.lastProcessedPeriodEndDate = lastProcessedPeriodEndDateUtc.toISOString();
+                    }
                     
                     finalSuccessCount = successCount;
                     finalFailureCount = failureCount;
-
-                    // --- 현재 챌린지 기간 성공 여부 (isActive) 판정 ---
-                    // 현재가 챌린지 기간이고, 해당 기간에 포스팅이 있는 경우에만 true
                     finalIsActive = isCurrentPeriod && hasPostInCurrentPeriod;
                     writeOperations.isActive = finalIsActive;
-                    console.log(`[${blogName}] 현재 기간 포스팅 여부: ${hasPostInCurrentPeriod}, 현재가 챌린지 기간인지: ${isCurrentPeriod}, isActive: ${finalIsActive}`);
-                    console.log(`[${blogName}] 최종 결정된 isActive: ${finalIsActive}`);
 
-                    if (!blogData.lastProcessedPeriodEndDate &&
-                        finalIsActive &&
-                        successCount === 0 &&
-                        failureCount === 0) {
+                    if (!blogData.lastProcessedPeriodEndDate && finalIsActive && successCount === 0 && failureCount === 0) {
                         writeOperations.challengeSuccessCount = 1;
                         finalSuccessCount = 1;
-                        console.log(`[${blogName}] 첫 2주차 '일반 챌린지', 현재 기간 포스팅 확인되어 successCount=1 임시 설정`);
                     }
                 }
 
                 if (Object.keys(writeOperations).length > 0) {
                     await blogsRef.doc(blogId).update(writeOperations);
-                    console.log(`[${blogName}] Firestore 업데이트. CP:${finalChallengePosts}, Special:${finalSpecialMissionCompleted}, Active:${finalIsActive}, S:${writeOperations.challengeSuccessCount !== undefined ? writeOperations.challengeSuccessCount : finalSuccessCount}, F:${writeOperations.challengeFailureCount !== undefined ? writeOperations.challengeFailureCount : finalFailureCount}`);
-                } else {
-                    console.log(`[${blogName}] 업데이트할 새로운 RSS 정보 없음.`);
+                    console.log(`[${blogName}] Firestore 업데이트 완료`);
                 }
                 successfulRssUpdates++;
 
@@ -436,29 +343,25 @@ if (lastProcessedPeriodEndDateUtc && (!blogData.lastProcessedPeriodEndDate || ne
                 const rank = index + 1;
                 if (!blog.id) { console.error('Rank update: blog.id is undefined', blog); return Promise.resolve(); }
                 return blogsRef.doc(blog.id).update({ rank: rank })
-                    .catch(err => { console.error(`[${blog.id}] 순위 업데이트 실패:`, err.message); return Promise.resolve(); });
+                    .catch(err => { console.error(`[${blog.id}] 순위 업데이트 실패:`, err.message); });
             });
             await Promise.all(rankUpdatePromises);
             console.log('블로그 순위 재계산 및 업데이트 완료.');
-        } else { console.log('순위를 계산할 블로그 데이터가 없습니다.'); }
+        }
 
-        const finalResponseObject = {
+        return res.status(200).json({
             message: `모든 업데이트 완료. RSS 성공: ${successfulRssUpdates}, RSS 실패: ${failedRssUpdates}`,
             updatedCount: successfulRssUpdates,
             errorCount: failedRssUpdates
-        };
-        console.log('Sending final success response object:', JSON.stringify(finalResponseObject, null, 2));
-        return res.status(200).json(finalResponseObject);
+        });
 
     } catch (finalError) {
         console.error('전체 RSS 업데이트 프로세스 중 심각한 오류 발생:', finalError);
-        const errorResponseObject = {
+        return res.status(500).json({
             error: '전체 RSS 업데이트 프로세스 중 심각한 오류 발생',
             details: String(finalError.message),
             updatedCount: successfulRssUpdates,
             errorCount: failedRssUpdates
-        };
-        console.log('Sending final error response object:', JSON.stringify(errorResponseObject, null, 2));
-        return res.status(500).json(errorResponseObject);
+        });
     }
 };
